@@ -19,8 +19,8 @@ value class Shape<FROM:VO, TO: VO>(val data: Select<FROM, TO>){
     inline operator fun <V:VO> To<V>.invoke(block:V.()->KProperty<*>):ToField
     = ToField(factory.instance.block().name)
 
-    inline operator fun ToField.contains(alias:AliasField):Boolean{
-        data.shape(alias.pair, prop, Op.In)
+    inline operator fun ToField.contains(from:ToField):Boolean{
+        data.shape(from.prop, prop, Op.In)
         return true
     }
 }

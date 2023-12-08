@@ -26,18 +26,18 @@ internal object To{
     private inline fun to(type:KClass<*>, v:Any, field:Field<*>):Wrap<String> = encoders[type]?.invoke(v, field) ?: W("$v")
     fun vo(d:Any):Wrap<String>{
         val vo:VO = d as VO
-        val fields:HashMap<String, Field<*>> = vo.getFields() ?: return ToVONoInitialized(vo).wrap()
-        val tasks:HashMap<String, Task> = vo.getTasks() ?: return ToVONoInitialized(vo).wrap()
-        val keys:List<String> = VO.keys(vo) ?: return ToVONoInitialized(vo).wrap()
+        val fields:HashMap<String, Field<*>> = vo.getFields() ?: return ToVONoInitialized(vo, "getFields").wrap()
+        val tasks:HashMap<String, Task>? = vo.getTasks()
+        val keys:List<String> = VO.keys(vo) ?: return ToVONoInitialized(vo, "getKeys").wrap()
         val result:StringBuilder = StringBuilder()
         var i = 0
         while(i < keys.size){
             val key:String = keys[i++]
-            val include:((String, Any?) -> Boolean)? = tasks[key]?.include
+            val include:((String, Any?) -> Boolean)? = tasks?.get(key)?.include
             result.append(
                 vo[key]?.let{v->
                     if(include?.invoke(key, v) != false) {
-                        val field: Field<*> = fields[key] ?: return ToVONoInitialized(vo).wrap()
+                        val field: Field<*> = fields[key] ?: return ToVONoInitialized(vo, "getField[$key]").wrap()
                         to(field::class, v, field).getOrFailEffect { return it.wrap() }
                     }else ""
                 } ?: if(include == _optinal) OPTIONAL_NULL else ""

@@ -6,6 +6,9 @@ import kore.vo.VO
 import kore.vql.dsl.select.*
 import kore.vql.query.*
 import kore.vql.query.select.Alias
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.jvm.JvmInline
 import kotlin.reflect.KProperty
 @Marker
@@ -19,5 +22,7 @@ import kotlin.reflect.KProperty
 
     inline fun select(block: Projection<FROM, TO>.()->Unit):Unit = Projection(data).block()
     inline fun where(block: Where<FROM, TO>.()->Unit):Unit = Where(data).block()
-    inline fun shape(block:Shape<FROM, TO>.()->Unit):Unit = Shape(data).block()
+    inline fun shape(block:Shape<FROM, TO>.()->Unit){
+        Shape(data).block()
+    }
 }

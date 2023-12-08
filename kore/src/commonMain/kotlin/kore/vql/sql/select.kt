@@ -8,17 +8,19 @@ import kore.vql.query.select.Alias
 import kore.vql.query.select.Case
 import kore.vql.query.select.Item
 
-class SelectSQLResult(val sql:String, val binds:ArrayList<String>, val tasks:List<SelectSQLResult>?){
-    override fun toString(): String = "sql:\n$sql${tasks?.joinToString(",\n", "\ntasks: [\n", "\n]"){it.toString()} ?: ""}"
+class SelectSQLResult(val sql:String, val map:Map<String, String>, val binds:ArrayList<String>){
+    override fun toString(): String = "sql:\n$sql"
 }
 fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2:P2, p3:P3, p4:P4):SelectSQLResult{
     init()
     val params: Array<VO> = arrayOf(p1, p2, p3, p4)
     val binds:ArrayList<String> = arrayListOf()
+    val map:HashMap<String, String> = hashMapOf()
     val selectStr:String = items.foldIndexed(""){i, acc, item->
         acc + when(item){
             is Item.Field -> {
                 val (alias, prop) = item.alias
+                map[prop] = item.to.ifEmpty { prop }
                 (if(i == 0) "" else ",") + "${alias.sqlName(this)}.$prop"
             }
             is Item.Param ->if(params.getOrNull(item.p.first) === None) "" else{
@@ -33,12 +35,13 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
     }
     val shapeStr:String? = _shape?.let {shapes->
         shapes.foldIndexed("") { i, acc, item ->
-            val (alias, prop) = item.prop
-            acc + (if(i == 0) "" else " and ") + "${alias.sqlName(this)}.$prop${item.op}(@@HOLDER:${item.to}@@)"
+            joins.find{it.bProp.ifEmpty {it.aProp} == item.from}?.let{
+                "$acc${if(i == 0) "" else " and "}j$${joins.indexOf(it)}.${it.aProp}${item.op}(:${item.to})"
+            } ?: acc
         }
     }
     val whereStr = _where?.let{
-        "\nWHERE " + (shapeStr?.let{it + " and "}  ?: "") + it.foldIndexed(""){i, acc, case->
+        "\nWHERE " + (shapeStr?.let{ "$it and " }  ?: "") + it.foldIndexed(""){ i, acc, case->
             acc + (if(i == 0) "" else " or ") + "(${case.items.foldIndexed(""){i2, acc2, item->
                 acc2 + (if(i2 == 0) "" else " and ") + when(item){
                     is Case.Values -> {
@@ -63,7 +66,7 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
                 }
             }})"
         }
-    } ?: shapeStr?.let{"\nWHERE " + it}  ?: ""
+    } ?: shapeStr?.let{"\nWHERE $it "}  ?: ""
     val orderStr = _orders?.let {
         "\nORDER BY " + it.joinToString(",") {order->
             items.find {
@@ -84,10 +87,8 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
     } ?: ""
     return SelectSQLResult(
         "SELECT $selectStr FROM ${joins[0].a.instance::class.simpleName} j0$joinStr$whereStr$orderStr",
-        binds,
-        _serialTask?.map{
-            it.select._sql(p1, p2, p3, p4)
-        }
+        map,
+        binds
     )
 }
 object None:VO()

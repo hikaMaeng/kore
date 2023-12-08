@@ -22,22 +22,16 @@ import kotlin.reflect.KProperty
 @JvmInline
 value class Projection<FROM:VO, TO:VO>@PublishedApi internal constructor(@PublishedApi internal val data:Select<FROM, TO>){
     inline operator fun <V:VO> Alias<V>.invoke(block:V.()->KProperty<*>):AliasField
-    = AliasField(this to factory.instance.block().name).also{
-        data.itemField(it.pair, "")
-    }
+    = AliasField(this to factory.instance.block().name)
     inline operator fun <V:VO> P<V>.invoke(block:V.()->KProperty<*>):ParamField
-    = ParamField(this.index to factory.instance.block().name).also{
-        data.itemParam(it.pair, "")
-    }
-    inline operator fun <TO:VO> To<TO>.invoke(block:TO.()->KProperty<*>):ToField
+    = ParamField(this.index to factory.instance.block().name)
+    inline operator fun <V:VO> To<V>.invoke(block:V.()->KProperty<*>):ToField
     = ToField(factory.instance.block().name)
 
     inline infix fun AliasField.put(target:ToField){
-        data.items.removeLast()
         data.itemField(pair, target.prop)
     }
     inline infix fun ParamField.put(target:ToField){
-        data.items.removeLast()
         data.itemParam(pair, target.prop)
     }
     inline infix fun <F:VO, T:VO> Select<F, T>.put(target:ToField){
