@@ -31,7 +31,9 @@ abstract class VO(@PublishedApi internal val useInstanceField:Boolean = false){ 
                 _voKeys[vo.voID] = it
                 if(!vo.useInstanceField){
                     _voFields.getOrPut(vo.voID, ::hashMapOf)[key] = vo.__field__!!
+//                    println("firstRun VO ${vo::class.simpleName} task:${vo.__task__}")
                     vo.__task__?.let{_voTasks.getOrPut(vo.voID, ::hashMapOf)[key] = it}
+//                    println("firstRun key ${key} :${_voTasks.getOrPut(vo.voID, ::hashMapOf)[key]}")
                 }
             }
             if(vo.useInstanceField){
@@ -51,8 +53,12 @@ abstract class VO(@PublishedApi internal val useInstanceField:Boolean = false){ 
     /** 속성 getter, setter*/
     inline operator fun set(key:String, value:Any){values[key] = getTask(key)?.setFold(this, key, value) ?: value}
     inline operator fun get(key:String):Any? = getTask(key)?.let{
+//        println("vo getTask, $key: ${it.getDefault(this, key)}, value:${values[key]}")
         (values[key] ?: it.getDefault(this, key))?.let{v->it.getFold(this, key, v)}
-    } ?: values[key]
+    } ?: run{
+//        println("vo no getTask, $key")
+        values[key]
+    }
     /** 전역 컨테이너용 키 */
     @PublishedApi internal var _id:String? = null
     inline val voID:String get() = _id ?: this::class.qualifiedName!!.also {_id = it}

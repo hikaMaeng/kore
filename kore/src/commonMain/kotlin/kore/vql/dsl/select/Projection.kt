@@ -25,8 +25,13 @@ value class Projection<FROM:VO, TO:VO>@PublishedApi internal constructor(@Publis
     = AliasField(this to factory.instance.block().name)
     inline operator fun <V:VO> P<V>.invoke(block:V.()->KProperty<*>):ParamField
     = ParamField(this.index to factory.instance.block().name)
-    inline operator fun <V:VO> To<V>.invoke(block:V.()->KProperty<*>):ToField
+    inline operator fun <V:Any> To<TO>.invoke(block:TO.()->KProperty<V>):ToField
     = ToField(factory.instance.block().name)
+
+    @JvmInline
+    value class ToFieldList@PublishedApi internal constructor(@PublishedApi internal val prop:String)
+    inline fun <LIST:MutableList<out VO>> To<TO>.shape(block:TO.()->KProperty<LIST>):ToFieldList
+    = ToFieldList(factory.instance.block().name)
 
     inline infix fun AliasField.put(target:ToField){
         data.itemField(pair, target.prop)
@@ -34,7 +39,7 @@ value class Projection<FROM:VO, TO:VO>@PublishedApi internal constructor(@Publis
     inline infix fun ParamField.put(target:ToField){
         data.itemParam(pair, target.prop)
     }
-    inline infix fun <F:VO, T:VO> Select<F, T>.put(target:ToField){
+    inline infix fun <F:VO, T:VO> Select<F, T>.put(target:ToFieldList){
         data.task(this, target.prop)
     }
     inline fun orderBy(block:Order<FROM, TO>.()->Unit):Unit = Order(data).block()

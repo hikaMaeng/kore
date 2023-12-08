@@ -11,5 +11,7 @@ class RSmemberClub: VO(){
     companion object:()-> RSmemberClub by ::RSmemberClub
     val member_rowid by int
     val username by string
-    val userclub by voListDefault(Club, ::arrayListOf)
+    val userclub by voList(Club){
+        default(::arrayListOf)
+    }
 }

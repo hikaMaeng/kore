@@ -7,7 +7,7 @@ import kore.vql.expression.Op
 import kore.vql.query.select.*
 
 sealed class Select<FROM:VO, TO:VO>(from:()->FROM, val to:()->TO):Query {
-    class Shape(val from:String, val to:String, val op:Op)
+    class ShapeRelation(val rsKey:String, val parentRsKey:String, val op:Op)
     @PublishedApi internal abstract val initializer:()->Unit
     @PublishedApi internal var isInitialized = false
     @PublishedApi internal inline fun init(){
@@ -18,12 +18,14 @@ sealed class Select<FROM:VO, TO:VO>(from:()->FROM, val to:()->TO):Query {
     }
     val items:ArrayList<Item> = arrayListOf()
     @PublishedApi internal val joins:ArrayList<Join> = arrayListOf(Join(from, "", 0, ""))
+    inline fun getJoinWithRsKey(rsKey:String):Pair<Int, Join>?
+    = joins.find{it.bProp.ifEmpty{it.aProp} == rsKey}?.let{joins.indexOf(it) to it}
     @PublishedApi internal var _orders:LinkedHashSet<Order>? = null
     @PublishedApi internal val orders:LinkedHashSet<Order> get() = _orders ?: linkedSetOf<Order>().also {_orders = it}
     @PublishedApi internal var _where:ArrayList<Case>? = null
     @PublishedApi internal val where:ArrayList<Case> get() = _where ?: arrayListOf(Case()).also {_where = it}
-    @PublishedApi internal var _shape:ArrayList<Shape>? = null
-    @PublishedApi internal val shape:ArrayList<Shape> get() = _shape ?: arrayListOf<Shape>().also {_shape = it}
+    @PublishedApi internal var _shapeRelation:ArrayList<ShapeRelation>? = null
+    val shapeRelations:ArrayList<ShapeRelation> get() = _shapeRelation ?: arrayListOf<ShapeRelation>().also {_shapeRelation = it}
     @PublishedApi internal inline fun <A:VO> join(a:Pair<()->A, String>, b:Pair<Alias<*>, String>):Alias<A>
     = Alias(Join(a.first, a.second, b.first.index(joins), b.second).also{joins.add(it)})
 
@@ -39,8 +41,8 @@ sealed class Select<FROM:VO, TO:VO>(from:()->FROM, val to:()->TO):Query {
     @PublishedApi internal inline fun itemParam(p:Pair<Int, String>, to:String) {
         items.add(Item.Param(p, to))
     }
-    @PublishedApi internal inline fun shape(from:String, to:String, op:Op) {
-        shape.add(Shape(from, to, op))
+    @PublishedApi internal inline fun shape(rsKey:String, parentRsKey:String, op:Op) {
+        shapeRelations.add(ShapeRelation(rsKey, parentRsKey, op))
     }
     @PublishedApi internal inline fun whereIn(op:Op, a:Pair<Alias<*>, String>, values:List<Any>){
         where.last().items.add(Case.Values(op, a, values))

@@ -33,10 +33,10 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
     val joinStr = if(joins.size == 1) "" else "\n" + joins.foldIndexed(""){i, acc, join->
         acc + if(i == 0) "" else (if(i == 1) "" else "\n") + "INNER JOIN ${join.a.instance::class.simpleName} j$i on j$i.${join.aProp} = j${join.bJoinIndex}.${join.bProp}"
     }
-    val shapeStr:String? = _shape?.let {shapes->
-        shapes.foldIndexed("") { i, acc, item ->
-            joins.find{it.bProp.ifEmpty {it.aProp} == item.from}?.let{
-                "$acc${if(i == 0) "" else " and "}j$${joins.indexOf(it)}.${it.aProp}${item.op}(:${item.to})"
+    val shapeStr:String? = _shapeRelation?.let{relations->
+        relations.foldIndexed(""){i, acc, relation ->
+            getJoinWithRsKey(relation.rsKey)?.let{(index, join)->
+                "$acc${if(i == 0) "" else " and "}j$index.${join.aProp}${relation.op}(:P_${relation.parentRsKey})"
             } ?: acc
         }
     }

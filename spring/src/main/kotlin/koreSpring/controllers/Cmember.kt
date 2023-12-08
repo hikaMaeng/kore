@@ -27,6 +27,7 @@ class Cmember {
     @ResponseBody
     @GetMapping("/member/list")
     suspend fun list():Flow<String>{
+
         return Member.select(RSmemberClub){ member, rs->
             select{
                 member{::member_rowid} put rs{::member_rowid}
@@ -42,8 +43,8 @@ class Cmember {
                     shape {
                         rsClub{::member_rowid} in rs{::member_rowid}
                     }
-                } put rs{::userclub}
+                } put rs.shape{::userclub}
             }
-        }.r2dbcSelect(client).map { it.toVOSN()({"$it"}) }
+        }.r2dbcSelect(client).map { it.toVOSN()({"$it"}) + "|" }
     }
 }

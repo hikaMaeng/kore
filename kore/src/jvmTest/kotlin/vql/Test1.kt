@@ -105,9 +105,9 @@ class Test1 {
                         fromS1 {::title}
                     }
                     shape{
-                        fromS1{::t1_rowid} in rs{::t1_rowid}
+                        rsS1{::t1_rowid} in rs{::t1_rowid}
                     }
-                } put rs{::t2}
+                } put rs.shape{::t2}
             }
         }
         println(query1.sql())

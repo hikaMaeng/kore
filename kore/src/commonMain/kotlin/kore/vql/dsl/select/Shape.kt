@@ -13,13 +13,18 @@ import kotlin.jvm.JvmInline
 import kotlin.reflect.KProperty
 @Marker
 @JvmInline
-value class Shape<FROM:VO, TO: VO>(val data: Select<FROM, TO>){
+value class Shape<FROM:VO, TO:VO>(val data: Select<FROM, TO>){
     inline operator fun <V:VO> Alias<V>.invoke(block:V.()->KProperty<*>):AliasField
     = AliasField(this to factory.instance.block().name)
+    @JvmInline
+    value class ToFieldA@PublishedApi internal constructor(@PublishedApi internal val prop:String)
+    inline operator fun To<TO>.invoke(block:TO.()->KProperty<*>):ToFieldA
+    = ToFieldA(factory.instance.block().name)
+
     inline operator fun <V:VO> To<V>.invoke(block:V.()->KProperty<*>):ToField
     = ToField(factory.instance.block().name)
 
-    inline operator fun ToField.contains(from:ToField):Boolean{
+    inline operator fun ToField.contains(from:ToFieldA):Boolean{
         data.shape(from.prop, prop, Op.In)
         return true
     }
