@@ -41,7 +41,7 @@ import org.springframework.r2dbc.core.flow
                 shapes.forEach {item->
                     item.select._r2dbcSelect(client, p1, p2, p3, p4, list.map{it.props[item.to]!!}).collect{vo->
                         list.filter{
-                            true
+                            vo.props["a"] == it.props[item.to]
                         }.forEach {
                             @Suppress("UNCHECKED_CAST")
                             (it.props[item.to] as? ArrayList<Any>)?.add(vo)
