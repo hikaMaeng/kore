@@ -1,4 +1,4 @@
-@file:Suppress("NOTHING_TO_INLINE", "FunctionName", "SqlSourceToSinkFlow")
+@file:Suppress("FunctionName", "SqlSourceToSinkFlow")
 
 package kore.vql.sql
 

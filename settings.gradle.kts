@@ -9,3 +9,4 @@ pluginManagement {
 rootProject.name = "koreRoot"
 include(":kore")
 include(":spring")
+include(":wasm")

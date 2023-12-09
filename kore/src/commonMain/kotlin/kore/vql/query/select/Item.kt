@@ -1,6 +1,5 @@
 package kore.vql.query.select
 
-import kore.vo.VO
 import kore.vql.query.Select
 
 sealed interface Item{

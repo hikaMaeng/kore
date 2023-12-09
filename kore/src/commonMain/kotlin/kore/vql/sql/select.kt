@@ -1,4 +1,4 @@
-@file:Suppress("NOTHING_TO_INLINE")
+@file:Suppress("NOTHING_TO_INLINE", "FunctionName")
 
 package kore.vql.sql
 
@@ -30,7 +30,7 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
             is Item.Shape->""
         }
     }
-    val joinStr = if(joins.size == 1) "" else "\n" + joins.foldIndexed(""){i, acc, join->
+    val joinStr:String = joins.foldIndexed(if(joins.size == 1) "" else "\n"){ i, acc, join->
         acc + if(i == 0) "" else (if(i == 1) "" else "\n") + "INNER JOIN ${join.a.instance::class.simpleName} j$i on j$i.${join.aProp} = j${join.bJoinIndex}.${join.bProp}"
     }
     val shapeStr:String? = _shapeRelation?.let{relations->
@@ -40,50 +40,46 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
             } ?: acc
         }
     }
-    val whereStr = _where?.let{
-        "\nWHERE " + (shapeStr?.let{ "$it and " }  ?: "") + it.foldIndexed(""){ i, acc, case->
-            acc + (if(i == 0) "" else " or ") + "(${case.items.foldIndexed(""){i2, acc2, item->
-                acc2 + (if(i2 == 0) "" else " and ") + when(item){
-                    is Case.Values -> {
-                        val (alias, prop) = item.a
-                        val index = joins.indexOf(alias.join)
-                        "j$index.$prop${item.op}(${item.values.joinToString(","){if(it is String) "'$it'" else "it"}})"
-                    }
-                    is Case.Value -> {
-                        val (alias, prop) = item.a
-                        "${alias.sqlName(this)}.$prop${item.op}${if(item.value is String) "'${item.value}'" else "${item.value}"}"
-                    }
-                    is Case.Field -> {
-                        val (aliasA, propA) = item.a
-                        val (aliasB, propB) = item.b
-                        "${aliasA.sqlName(this)}.$propA${item.op}${aliasB.sqlName(this)}.$propB"
-                    }
-                    is Case.Param ->{
-                        val (alias: Alias<*>, propA: String) = item.a
-                        binds.add("${item.b.first}:${item.b.second}")
-                        "${alias.sqlName(this)}.$propA${item.op}:${item.b.second}"  
-                    }
+    val whereStr:String = _where?.foldIndexed("\nWHERE ${shapeStr?.let{"$it and "}  ?: ""}"){i, acc, case->
+        "$acc${if(i == 0) "" else " or "}(${case.items.foldIndexed(""){i2, acc2, item->
+            acc2 + (if(i2 == 0) "" else " and ") + when(item){
+                is Case.Values -> {
+                    val (alias, prop) = item.a
+                    val index = joins.indexOf(alias.join)
+                    "j$index.$prop${item.op}(${item.values.joinToString(","){if(it is String) "'$it'" else "it"}})"
                 }
-            }})"
-        }
+                is Case.Value -> {
+                    val (alias, prop) = item.a
+                    "${alias.sqlName(this)}.$prop${item.op}${if(item.value is String) "'${item.value}'" else "${item.value}"}"
+                }
+                is Case.Field -> {
+                    val (aliasA, propA) = item.a
+                    val (aliasB, propB) = item.b
+                    "${aliasA.sqlName(this)}.$propA${item.op}${aliasB.sqlName(this)}.$propB"
+                }
+                is Case.Param ->{
+                    val (alias: Alias<*>, propA: String) = item.a
+                    binds.add("${item.b.first}:${item.b.second}")
+                    "${alias.sqlName(this)}.$propA${item.op}:${item.b.second}"  
+                }
+            }
+        }})"
     } ?: shapeStr?.let{"\nWHERE $it "}  ?: ""
-    val orderStr = _orders?.let {
-        "\nORDER BY " + it.joinToString(",") {order->
-            items.find {
-                when(it) {
-                    is Item.Field -> it.to
-                    is Item.Param -> ""
-                    is Item.Shape -> ""
-                } == order.prop
-            }?.let {
-                val joinAlias = when(it) {
-                    is Item.Field -> it.alias.first.sqlName(this)
-                    is Item.Param -> ""
-                    is Item.Shape -> ""
-                }
-                "$joinAlias.${order.prop}${if(order.isAsc) "" else " desc"}"
-            } ?: ""
-        }
+    val orderStr:String = _orders?.joinToString(",", "\nORDER BY "){ order->
+        items.find {item->
+            when(item) {
+                is Item.Field -> item.to
+                is Item.Param -> ""
+                is Item.Shape -> ""
+            } == order.prop
+        }?.let{item->
+            val joinAlias = when(item) {
+                is Item.Field -> item.alias.first.sqlName(this)
+                is Item.Param -> ""
+                is Item.Shape -> ""
+            }
+            "$joinAlias.${order.prop}${if(order.isAsc) "" else " desc"}"
+        } ?: ""
     } ?: ""
     return SelectSQLResult(
         "SELECT $selectStr FROM ${joins[0].a.instance::class.simpleName} j0$joinStr$whereStr$orderStr",
