@@ -12,73 +12,45 @@ import org.springframework.r2dbc.core.flow
 
 @PublishedApi internal suspend fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._r2dbcSelect(client:DatabaseClient, p1:P1, p2:P2, p3:P3, p4:P4, parent:List<VO>? = null):Flow<TO>{
     val result = _sql(p1, p2, p3, p4)
-//    println("-----------------")
-//    println("${result.sql}")
-//    println("$parent")
-//    println("-----------------")
     return client.sql(result.sql).let {
         result.binds.fold(
-            if(parent == null) it else shapeRelations.fold(it){acc, relation->
-//                println("+++P_${relation.parentRsKey}, ${parent.map{vo->vo.props[relation.parentRsKey]!!}.toTypedArray().joinToString()}")
-                acc.bind("P_${relation.parentRsKey}", parent.map{vo->vo.props[relation.parentRsKey]!!})
+            if(parent == null) it else relations.fold(it){acc, relation->
+                acc.bind("P_${relation.parentRsKey}", parent.map{vo->vo[relation.parentRsKey]!!})
             }
         ){acc, s ->
-            val p = when (s[0]) {
+            val key = s.substring(2)
+            acc.bind(key, when(s[0]){
                 '0' -> p1
                 '1' -> p2
                 '2' -> p3
                 '3' -> p4
                 else -> return@let null
-            }
-            val key = s.substring(2)
-            acc.bind(key, p.props[key]!!)
+            }[key])
         }
     }?.fetch()?.flow()?.map{rs->
         to().also{to->rs.forEach{(k, v) ->to[result.map[k]!!] = v}}
-    }?.let{flow->
-        val shapes = items.filterIsInstance<Item.Shape>()
-        if(shapes.isEmpty()) flow else flow{
+    }?.let{f->
+        val shapes:List<Item.Shape> = getShapesFromItem()
+        if(shapes.isEmpty()) f else flow{
             val emitter:FlowCollector<TO> = this
-            val list:ArrayList<TO> = arrayListOf()
-            flow.onCompletion {err->
-//                println("*************root complete:$list")
-                var count = shapes.size
-                shapes.forEach {shape->
-                    shape.select._r2dbcSelect(client, p1, p2, p3, p4, list)
-                    .onCompletion {
-//                        println("onCompletion:$count")
-                        count--
-                        if(count == 0){
-//                            println("onEmit:$emitter")
-                            list.forEach { emitter.emit(it) }
+            val list:ArrayList<TO> = f.fold(arrayListOf()){list, to->list.also{it.add(to)}}
+            var count = shapes.size
+            shapes.forEach {shape->
+                shape.select._r2dbcSelect(client, p1, p2, p3, p4, list)
+                .onCompletion {
+                    count--
+                    if(count == 0)list.forEach{emitter.emit(it)}
+                }
+                .collect{vo->
+                    list.filter{parentItem->
+                        shape.select.relations.all{relation->
+                            vo[relation.rsKey] == parentItem[relation.parentRsKey]
                         }
-                    }
-                    .collect{vo->
-//                        println("onCollect:-----------------$vo")
-                        list.filter{parentItem->
-//                            println("filter----$parentItem")
-                            shape.select.shapeRelations.all{relation->
-//                                println("voKey:${relation.rsKey}, ${vo[relation.rsKey]}")
-//                                println("pKey:${relation.parentRsKey}, ${parentItem[relation.parentRsKey]}")
-                                vo[relation.rsKey] == parentItem[relation.parentRsKey]
-                            }
-                        }.forEach{parentItem->
-//                            println("parentItem:$parentItem, | to:${shape.to},| ${parentItem[shape.to].hashCode()} | ${parentItem[shape.to] as? MutableList<Any>}")
-//                            println("$vo")
-                            @Suppress("UNCHECKED_CAST")
-                            val shapeTarget = parentItem[shape.to] as? MutableList<Any>
-                            if(shapeTarget != null){
-//                                println("-----${shapeTarget.size}------")
-                                shapeTarget.add(vo)
-//                                println("-----${shapeTarget.size}------")
-                            }
-
-                        }
+                    }.forEach{parentItem->
+                        @Suppress("UNCHECKED_CAST")
+                        (parentItem[shape.to] as? MutableList<Any>)?.add(vo)
                     }
                 }
-            }.collect{
-//                println("*************root collect:$it")
-                list.add(it)
             }
         }
     } ?: flow{}

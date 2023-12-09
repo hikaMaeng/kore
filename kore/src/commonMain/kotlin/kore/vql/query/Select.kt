@@ -16,7 +16,8 @@ sealed class Select<FROM:VO, TO:VO>(from:()->FROM, val to:()->TO):Query {
             initializer()
         }
     }
-    val items:ArrayList<Item> = arrayListOf()
+    @PublishedApi internal val items:ArrayList<Item> = arrayListOf()
+    inline fun getShapesFromItem():List<Item.Shape> = items.filterIsInstance<Item.Shape>()
     @PublishedApi internal val joins:ArrayList<Join> = arrayListOf(Join(from, "", 0, ""))
     inline fun getJoinWithRsKey(rsKey:String):Pair<Int, Join>?
     = joins.find{it.bProp.ifEmpty{it.aProp} == rsKey}?.let{joins.indexOf(it) to it}
@@ -25,7 +26,8 @@ sealed class Select<FROM:VO, TO:VO>(from:()->FROM, val to:()->TO):Query {
     @PublishedApi internal var _where:ArrayList<Case>? = null
     @PublishedApi internal val where:ArrayList<Case> get() = _where ?: arrayListOf(Case()).also {_where = it}
     @PublishedApi internal var _shapeRelation:ArrayList<ShapeRelation>? = null
-    val shapeRelations:ArrayList<ShapeRelation> get() = _shapeRelation ?: arrayListOf<ShapeRelation>().also {_shapeRelation = it}
+    @PublishedApi internal val shapeRelations:ArrayList<ShapeRelation> get() = _shapeRelation ?: arrayListOf<ShapeRelation>().also{_shapeRelation = it}
+    val relations:List<ShapeRelation> get() = shapeRelations
     @PublishedApi internal inline fun <A:VO> join(a:Pair<()->A, String>, b:Pair<Alias<*>, String>):Alias<A>
     = Alias(Join(a.first, a.second, b.first.index(joins), b.second).also{joins.add(it)})
 
