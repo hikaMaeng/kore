@@ -11,7 +11,7 @@ import org.springframework.r2dbc.core.bind
 import org.springframework.r2dbc.core.flow
 
 @PublishedApi internal suspend fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._r2dbcSelect(client:DatabaseClient, p1:P1, p2:P2, p3:P3, p4:P4, parent:List<VO>? = null):Flow<TO>{
-    val result = _sql(p1, p2, p3, p4)
+    val result:SelectSQLResult = _sql(p1, p2, p3, p4)
     return client.sql(result.sql).let {
         result.binds.fold(
             if(parent == null) it else relations.fold(it){acc, relation->

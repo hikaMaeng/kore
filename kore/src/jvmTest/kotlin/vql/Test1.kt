@@ -106,6 +106,7 @@ class Test1 {
                     }
                     shape{
                         rsS1{::t1_rowid} in rs{::t1_rowid}
+                        rsS1{::t1_rowid} in rs{::t1_rowid}
                     }
                 } put rs.shape{::t2}
             }

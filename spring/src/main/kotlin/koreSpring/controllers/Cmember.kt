@@ -45,6 +45,11 @@ class Cmember {
                     }
                 } put rs.shape{::userclub}
             }
-        }.r2dbcSelect(client).map { it.toVOSN()({"$it"}) + "|" }
+        }.r2dbcSelect(client).map{ it.toVOSN()({"$it"}) + "|" }
+        //.insertFirst()
+        //.addLast()
+        //1|hika|1|축구부|1||2|당구부|1||2|jidolstar|3|농구부|2||4|장기부|2|@||
+        //1|hika|1|축구부|1||2|당구부|1|@||2|jidolstar|3|농구부|2||4|장기부|2|@|@|
+        // class Result:VO(){ val data by voList}
     }
 }
