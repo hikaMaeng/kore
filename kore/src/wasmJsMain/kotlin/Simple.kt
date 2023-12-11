@@ -3,7 +3,7 @@ import kotlinx.browser.document
 import kotlinx.dom.appendText
 
 fun main() {
-    document.body?.appendText("Hello, ${greet()}!,. ${enumValues<Test>()}")
+    document.body?.appendText("Hello, ${greet()}!")//,. ${enumValues<Test>()}")
 }
 
 fun greet() = "world"
