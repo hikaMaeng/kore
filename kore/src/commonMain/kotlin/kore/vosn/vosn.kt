@@ -71,7 +71,7 @@ object VOSN:Converter<String>{
     private val encodeStringMap:Map<String, String> = hashMapOf(
         "\\" to "\\\\", "@" to "\\@", "|" to "\\|", "~" to "\\~", "!" to "\\!", "\n" to "\\n", "\r" to "\\r"
     )
-    private val decodeStringRex:Regex = Regex("\\[\\|@|[|]|~|n|r|!]")
+    private val decodeStringRex:Regex = Regex("\\[\\|@|[|]|~\n\r|!]")
     private val decodeStringMap:Map<String, String> = hashMapOf(
         "\\\\" to "\\", "\\@" to "@", "\\|" to "|", "\\~" to "~", "\\!" to "!", "\\n" to "\n", "\\r" to "\r"
     )
