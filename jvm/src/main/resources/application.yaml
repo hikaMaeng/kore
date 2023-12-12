@@ -1,0 +1,57 @@
+server:
+  port: 8081
+  servlet:
+    encoding:
+      force-response: true
+  compression:
+    enabled: true
+    min-response-size: 1024MB
+    mime-types: application/x-download,text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+spring:
+  sql:
+    init:
+      encoding: utf-8
+  r2dbc:
+    name: admin
+    username: ${r2dbc_username}
+    password: ${r2dbc_password}
+    url: ${r2dbc_url}?useUnicode=true&serverTimezone=Asia/Seoul
+    pool:
+      enabled: true
+      initial-size: 10
+      max-size: 20
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+#---
+#spring:
+#  config:
+#    activate:
+#      on-profile: local
+#  devtools:
+#    livereload:
+#      enabled: true
+#server:
+#  port: 8081
+#debug: false
+#trace: false
+#logging:
+#  level:
+#    root: info
+#    org.springframework: info
+#---
+#spring:
+#  config:
+#    activate:
+#      on-profile: product
+#debug: false
+#trace: false
+#logging:
+#  level:
+#    root: info
+#    org.springframework: info
+#server:
+#  port: 8080

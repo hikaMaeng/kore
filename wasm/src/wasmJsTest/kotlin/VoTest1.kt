@@ -94,16 +94,9 @@ class VOTest1 {
     }
     @Test
     fun test2(){
-        (1..100).forEach {
-            Thread{
-                println("a")
-                Test2()
-            }.start()
-        }
-        Thread{
-            Thread.sleep(200)
+        println("------------------")
+        println("${Test2::class.toString()},...${Test2()::class.toString()}")
             assertEquals(VO.keys(Test2::class), arrayListOf("a", "b", "c"))
-        }
     }
     sealed class Test3Sum:VO(){
         companion object:VOSum<Test3Sum>(::Sub1, ::Sub2, ::Sub3)

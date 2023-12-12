@@ -6,7 +6,9 @@ import kore.vo.VO
 import kore.error.E
 
 abstract class Task{
-    fun interface Default:(VO, String)->Any?
+    fun interface Default{
+        operator fun invoke(target:VO, key:String):Any?
+    }
     class NoDefault(val vo:VO, val name:String):E(name)
     class TaskFail(val type:String, val vo:VO, val key:String, val result:Any):E(result)
     companion object{

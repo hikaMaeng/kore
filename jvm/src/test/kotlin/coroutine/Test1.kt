@@ -1,10 +1,10 @@
 package coroutine
 
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-import kotlin.test.Test
+//import kotlinx.coroutines.delay
+//import kotlinx.coroutines.runBlocking
+//import kotlin.coroutines.resume
+//import kotlin.coroutines.suspendCoroutine
+//import kotlin.test.Test
 
 
 class Test1 {

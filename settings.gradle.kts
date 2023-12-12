@@ -21,6 +21,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "koreRoot"
 include(":kore")
+include(":jvm")
 include(":spring")
 include(":wasm")
+include(":js")
 
