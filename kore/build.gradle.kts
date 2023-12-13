@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+
 plugins {
     kotlin("multiplatform")
 }
@@ -24,7 +26,7 @@ kotlin {
         nodejs()
     }
     @Suppress("OPT_IN_USAGE")
-    wasmJs{}
+    wasmJs()
     sourceSets {
         val commonMain by getting {
             dependencies {

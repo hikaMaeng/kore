@@ -67,11 +67,11 @@ object VOSN:Converter<String>{
      * ! : 문자열 리스트의 빈 리스트를 표현함
      * \n, \r : 문자열의 개행은 이스케이핑한다
      */
-    private val encodeStringRex:Regex = Regex("[\\@|~\n\r!]")
+    private val encodeStringRex:Regex = Regex("[@|~\n\r!]")
     private val encodeStringMap:Map<String, String> = hashMapOf(
         "\\" to "\\\\", "@" to "\\@", "|" to "\\|", "~" to "\\~", "!" to "\\!", "\n" to "\\n", "\r" to "\\r"
     )
-    private val decodeStringRex:Regex = Regex("\\[\\|@|[|]|~\n\r|!]")
+    private val decodeStringRex:Regex = Regex("\\\\[@|~\n\r!]")
     private val decodeStringMap:Map<String, String> = hashMapOf(
         "\\\\" to "\\", "\\@" to "@", "\\|" to "|", "\\~" to "~", "\\!" to "!", "\\n" to "\n", "\\r" to "\r"
     )

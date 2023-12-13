@@ -1,5 +1,4 @@
-import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport
-import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 
 plugins {
     kotlin("multiplatform")
@@ -7,9 +6,22 @@ plugins {
 repositories {
     mavenCentral()
 }
+tasks.withType<KotlinJsCompile>().configureEach {
+    kotlinOptions{
+        useEsClasses = true
+        typedArrays = true
+        sourceMap = false
+    }
+}
 kotlin {
     js{
+        moduleName = "kore"
+        useEsModules()
         browser {
+            webpackTask{
+                sourceMaps = false
+                mainOutputFileName = "kore.js"
+            }
             testTask {
                 useKarma {
                     useChromeHeadless()
@@ -35,7 +47,4 @@ kotlin {
         }
         val jsTest by getting
     }
-//    sourceSets.all{
-//        languageSettings.languageVersion = "2.0"
-//    }
 }
