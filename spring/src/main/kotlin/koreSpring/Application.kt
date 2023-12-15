@@ -40,17 +40,4 @@ fun main(args:Array<String>) {
     runApplication<Application>(*args)
 }
 
-val Dispatchers.LOOM: @BlockingExecutor CoroutineDispatcher get() = Executors.newVirtualThreadPerTaskExecutor().asCoroutineDispatcher()
 
-@EnableAsync
-@Configuration
-class ThreadConfig {
-    @Bean
-    fun applicationTaskExecutor():AsyncTaskExecutor = TaskExecutorAdapter(Executors.newVirtualThreadPerTaskExecutor())
-    @Bean
-    fun protocolHandlerVirtualThreadExecutorCustomizer(): TomcatProtocolHandlerCustomizer<*> {
-        return TomcatProtocolHandlerCustomizer { protocolHandler: ProtocolHandler ->
-            protocolHandler.executor = Executors.newVirtualThreadPerTaskExecutor()
-        }
-    }
-}

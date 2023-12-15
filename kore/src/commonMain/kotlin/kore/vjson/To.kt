@@ -16,7 +16,7 @@ class DataCotainer{
 }
 internal object To{
     private inline fun encode(type:KClass<*>, v:Any, field: Field<*>):Wrap<String> = encoders[type]?.invoke(v, field) ?: W("$v")
-    internal fun <V:VO> vo(vo:V):Wrap<String> {
+    internal fun <V:VO> vo(vo:V):Wrap<String>{
         val fields:HashMap<String, Field<*>> = vo.getFields() ?: return Wrap(ToVONoInitialized(vo))
         val tasks: HashMap<String, Task> = vo.getTasks() ?: return Wrap(ToVONoInitialized(vo))
         val keys:List<String> = VO.keys(vo) ?: return Wrap(ToVONoInitialized(vo))

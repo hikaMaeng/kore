@@ -9,5 +9,4 @@ class RSclub: VO(){
     val club_rowid by int
     val title by string
     val member_rowid by int
-
 }
