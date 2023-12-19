@@ -9,6 +9,7 @@ import kore.vo.task.Task
 import kore.vo.task.Task.Default
 
 object StringMapField: Field<MutableMap<String, String>> {
+    override val typeName:String = "StringMap"
     class T: Task(){
         fun default(v:MutableMap<String, String>){
             _default = Default{_,_->HashMap<String, String>(v.size).also{it.putAll(v)}}

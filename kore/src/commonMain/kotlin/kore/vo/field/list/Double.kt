@@ -9,6 +9,7 @@ import kore.vo.field.list.DoubleListField.T
 import kore.vo.task.Task
 
 object DoubleListField: Field<MutableList<Double>> {
+    override val typeName:String = "DoubleList"
     class T: Task(){
         fun default(v:MutableList<Double>){
             _default = Task.Default{_,_->ArrayList<Double>(v.size).also{it.addAll(v)}}

@@ -8,6 +8,7 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 
 object LongField: Field<Long> {
+    override val typeName:String = "Long"
     class T: Task(){
         fun default(v:Long){
             _default = v

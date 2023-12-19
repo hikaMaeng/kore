@@ -2,4 +2,6 @@
 
 package kore.vo.field
 
-interface Field<VALUE:Any>
+interface Field<VALUE:Any>{
+    val typeName:String
+}

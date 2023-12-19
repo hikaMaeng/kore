@@ -8,6 +8,7 @@ import kore.vo.task.Task.Default
 import kotlin.reflect.KClass
 
 class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
+    override val typeName:String = "VO"
     class T<V:VO>: Task(){
         fun default(block:()->V){
             _default = Default { _, _ -> block() }
@@ -21,6 +22,7 @@ class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
 inline fun <reified V:VO> VO.vo(noinline factory:()->V): Prop<V> = delegate(VOField[V::class, factory])
 inline fun <reified V:VO> VO.vo(noinline factory:()->V, block: VOField.T<V>.()->Unit): Prop<V> = delegate(VOField[V::class, factory], block){ VOField.T() }
 class VOListField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableList<V>>{
+    override val typeName:String = "VOList"
     class T<V:VO>: Task(){
         fun default(block:()->MutableList<V>){
             _default = Default{ _, _->
@@ -42,6 +44,7 @@ inline fun <reified V:VO> VO.voListDefault(noinline factory:()->V, noinline bloc
 inline fun <reified V:VO> VO.voList(noinline factory:()->V, block: VOListField.T<V>.()->Unit): Prop<MutableList<V>>
 = delegate(VOListField[V::class, factory], block){ VOListField.T() }
 class VOMapField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableMap<String, V>>{
+    override val typeName:String = "VOMap"
     class T<V:VO>: Task(){
         fun default(block:()->MutableMap<String, V>){
             _default = Default{_,_->

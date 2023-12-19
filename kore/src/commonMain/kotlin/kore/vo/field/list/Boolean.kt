@@ -9,6 +9,7 @@ import kore.vo.field.list.BooleanListField.T
 import kore.vo.task.Task
 
 object BooleanListField: Field<MutableList<Boolean>> {
+    override val typeName:String = "BooleanList"
     class T: Task(){
         fun default(v:MutableList<Boolean>){
             _default = Task.Default{_,_->ArrayList<Boolean>(v.size).also{it.addAll(v)}}

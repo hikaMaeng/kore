@@ -9,6 +9,7 @@ import kore.vo.field.list.ULongListField.T
 import kore.vo.task.Task
 
 object ULongListField: Field<MutableList<ULong>> {
+    override val typeName:String = "ULongList"
     class T: Task(){
         fun default(v:MutableList<ULong>){
             _default = Task.Default{_,_->ArrayList<ULong>(v.size).also{it.addAll(v)}}

@@ -8,6 +8,7 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 
 object DoubleField: Field<Double> {
+    override val typeName:String = "Double"
     class T: Task(){
         fun default(v:Double){
             _default = v

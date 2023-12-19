@@ -9,6 +9,7 @@ import kore.vo.field.list.FloatListField.T
 import kore.vo.task.Task
 
 object FloatListField: Field<MutableList<Float>> {
+    override val typeName:String = "FloatList"
     class T: Task(){
         fun default(v:MutableList<Float>){
             _default = Task.Default{_,_->ArrayList<Float>(v.size).also{it.addAll(v)}}

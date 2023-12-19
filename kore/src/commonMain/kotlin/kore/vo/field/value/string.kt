@@ -8,6 +8,7 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 
 object StringField: Field<String> {
+    override val typeName:String = "String"
     class T: Task(){
         fun default(v:String){
             _default = v

@@ -8,6 +8,7 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 
 object BooleanField: Field<Boolean> {
+    override val typeName:String = "Boolean"
     class T: Task(){
         fun default(v:Boolean){
             _default = v

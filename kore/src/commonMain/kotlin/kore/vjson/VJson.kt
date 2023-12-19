@@ -93,9 +93,9 @@ object VOJson {
 //        val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "a").terminate()
 //        val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "c").terminate()
 //        val tasks:HashMap<String, Task>? = vo.getTasks()
-
-        /** 0 vo, 1 map, 2 list*/
-        private var targetStack:ArrayList<Pair<Any, Any>> = ArrayList<Pair<Any, Any>>(10).also{it.add(vo to vo)}
+        data class Stack(val type:Any, val target:Any, val key:String = "")
+        /** type, target, key*/
+        private var targetStack:ArrayList<Stack> = ArrayList<Stack>(10).also{it.add(Stack(vo, vo))}
 
         private var state:Int = 100
         private var toState:Int = 0
@@ -172,6 +172,19 @@ object VOJson {
         private inline fun _falseRead(v:String, c:Int):V? = _wordRead("false", v, c)
         private inline fun nullRead(to:Int, v:String, c:Int):V? = read(to, 50, v, c)
         private inline fun _nullRead(v:String, c:Int):V? = _wordRead("null", v, c)
+        private inline fun convert(type:String):Any = when(type) {
+            "String"->flushed
+            "Int"->flushed.toIntOrNull() ?: throw Throwable("invalid int $flushed")
+            "Short"->flushed.toShortOrNull() ?: throw Throwable("invalid short $flushed")
+            "Long"->flushed.toLongOrNull() ?: throw Throwable("invalid long $flushed")
+            "UInt"->flushed.toUIntOrNull() ?: throw Throwable("invalid uint $flushed")
+            "UShort"->flushed.toUShortOrNull() ?: throw Throwable("invalid ushort $flushed")
+            "ULong"->flushed.toULongOrNull() ?: throw Throwable("invalid ulong $flushed")
+            "Float"->flushed.toFloatOrNull() ?: throw Throwable("invalid float $flushed")
+            "Double"->flushed.toDoubleOrNull() ?: throw Throwable("invalid double $flushed")
+            "Boolean"->if(flushed == "true") true else if(flushed == "false") false else throw Throwable("invalid boolean $flushed")
+            else->throw Throwable("invalid value field")
+        }
         tailrec operator fun invoke(v:String, c:Int):V?{
             if(v.isEmpty() || c >= v.length) return null
             return when(state){
@@ -222,25 +235,11 @@ object VOJson {
                 }
                 106->{ /** object value */
                     val (type, target) = targetStack.last()
-                    when(type){
-                        is VO->{
-                            val vo:VO = target as VO
-                            vo[key] = when(vo.getFields()?.get(key) ?: throw Throwable("invalid VO field")){
-                                is StringField->flushed
-                                is IntField->flushed.toIntOrNull() ?: throw Throwable("invalid int $flushed")
-                                is ShortField->flushed.toShortOrNull() ?: throw Throwable("invalid short $flushed")
-                                is LongField->flushed.toLongOrNull() ?: throw Throwable("invalid long $flushed")
-                                is UIntField->flushed.toUIntOrNull() ?: throw Throwable("invalid uint $flushed")
-                                is UShortField->flushed.toUShortOrNull() ?: throw Throwable("invalid ushort $flushed")
-                                is ULongField->flushed.toULongOrNull() ?: throw Throwable("invalid ulong $flushed")
-                                is FloatField->flushed.toFloatOrNull() ?: throw Throwable("invalid float $flushed")
-                                is DoubleField->flushed.toDoubleOrNull() ?: throw Throwable("invalid double $flushed")
-                                is BooleanField->if(flushed == "true") true else if(flushed == "false") false else throw Throwable("invalid boolean $flushed")
-                                else->throw Throwable("invalid value field")
-                            }
-
-                        }
-                        else->null
+                    when{
+                        type is VO->(target as VO)[key] = convert(vo.getFields()?.get(key)?.typeName ?: throw Throwable("invalid VO field"))
+                        type is String && type.startsWith('m')->(target as MutableMap<String, Any>)[key] = convert(type.substring(1))
+                        type is String && type.startsWith('l')->(target as MutableList<Any>).add(convert(type.substring(1)))
+                        else->throw Throwable("invalid type $type")
                     }
                     skipSpace(107, v, c + 1)
                 }
@@ -249,8 +248,16 @@ object VOJson {
                     when(it){
                         ','->skipSpace(102, v, c + 1)
                         '}'->{
-                            targetStack.removeAt(targetStack.size - 1)
+                            val (type, target) = targetStack.removeAt(targetStack.size - 1)
                             if(targetStack.isEmpty()) return vo
+                            else{
+                                when{
+                                    type is VO->skipSpace(107, v, c + 1)
+                                    type is String && type.startsWith('m')->skipSpace(107, v, c + 1)
+                                    type is String && type.startsWith('l')->skipSpace(107, v, c + 1)
+                                    else->throw Throwable("invalid type $type")
+                                }
+                            }
                             skipSpace(108, v, c + 1)
                         }
                         else->throw Throwable("invalid object")
@@ -260,6 +267,7 @@ object VOJson {
             }
         }
     }
+
     fun <V:VO> from(vo:V, value:Flow<String>):Flow<V> = flow{
         val emitter:FlowCollector<V> = this
         val updater:Updater<V> = Updater(vo)

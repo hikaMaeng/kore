@@ -9,6 +9,7 @@ import kore.vo.field.list.StringListField.T
 import kore.vo.task.Task
 
 object StringListField: Field<MutableList<String>> {
+    override val typeName:String = "StringList"
     class T: Task(){
         fun default(v:MutableList<String>){
             _default = Task.Default{_,_->ArrayList<String>(v.size).also{it.addAll(v)}}

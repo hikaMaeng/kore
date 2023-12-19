@@ -8,6 +8,7 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 
 object ShortField: Field<Short> {
+    override val typeName:String = "Short"
     class T: Task(){
         fun default(v:Short){
             _default = v

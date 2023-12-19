@@ -2,13 +2,14 @@
 
 package kore.vo.field
 
-import kore.vo.VOSum
 import kore.vo.VO
+import kore.vo.VOSum
 import kore.vo.task.Task
+import kore.vo.task.Task.Default
 import kotlin.reflect.KClass
 
-
 class VOSumField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<V>{
+    override val typeName:String = "Sum"
     class T<V:VO>: Task(){
         fun default(block:()->V){
             _default = Default { _, _ -> block() }
@@ -24,6 +25,7 @@ class VOSumField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<V>{
 inline fun <reified V:VO> VO.sum(sum:VOSum<V>): Prop<V> = delegate(VOSumField[V::class, sum])
 inline fun <reified V:VO> VO.sum(sum:VOSum<V>, block: VOSumField.T<V>.()->Unit): Prop<V> = delegate(VOSumField[V::class, sum], block){ VOSumField.T() }
 class VOSumListField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<MutableList<V>>{
+    override val typeName:String = "SumList"
     class T<V:VO>: Task(){
         fun default(block:()->MutableList<V>){
             _default = Default{ _, _->
@@ -45,6 +47,7 @@ inline fun <reified V:VO> VO.sumListDefault(sum:VOSum<V>, noinline block:()->Mut
 inline fun <reified V:VO> VO.sumList(sum:VOSum<V>, block: VOSumListField.T<V>.()->Unit): Prop<MutableList<V>>
         = delegate(VOSumListField[V::class, sum], block){ VOSumListField.T() }
 class VOSumMapField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<MutableMap<String, V>>{
+    override val typeName:String = "SumMap"
     class T<V:VO>: Task(){
         fun default(block:()->MutableMap<String, V>){
             _default = Default{_,_->
