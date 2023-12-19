@@ -248,17 +248,18 @@ object VOJson {
                     when(it){
                         ','->skipSpace(102, v, c + 1)
                         '}'->{
-                            val (type, target) = targetStack.removeAt(targetStack.size - 1)
+                            val (_, target) = targetStack.removeAt(targetStack.size - 1)
                             if(targetStack.isEmpty()) return vo
                             else{
+                                val (type, parent, key) = targetStack.last()
                                 when{
-                                    type is VO->skipSpace(107, v, c + 1)
-                                    type is String && type.startsWith('m')->skipSpace(107, v, c + 1)
-                                    type is String && type.startsWith('l')->skipSpace(107, v, c + 1)
+                                    type is VO->(parent as VO)[key] = target
+                                    type is String && type.startsWith('m')->(target as MutableMap<String, Any>)[key] = target
+                                    type is String && type.startsWith('l')->(target as MutableList<Any>).add(target)
                                     else->throw Throwable("invalid type $type")
                                 }
                             }
-                            skipSpace(108, v, c + 1)
+                            skipSpace(107, v, c + 1)
                         }
                         else->throw Throwable("invalid object")
                     }
