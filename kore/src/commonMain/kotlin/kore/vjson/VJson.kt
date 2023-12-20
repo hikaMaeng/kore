@@ -105,14 +105,17 @@ object VOJson {
         private inline fun skipSpace(to:Int, v:String, c:Int):V?{
             toState = to
             state = 0
+            println("skipSpace $toState, $state, $c, ${v.getOrNull(c)}, $v")
             return invoke(v, c)
         }
         private inline fun _skipSpace(v:String, c:Int):V?{
             var cursor = c
+            println("skipSpace0 $cursor, ${v[cursor]}, $v")
             do{
                 val it = v[cursor]
                 if(" \t\n\r".indexOf(it) != -1) cursor++ else break
             }while(cursor < v.length)
+            println("skipSpace1 $cursor, ${v[cursor]}, $v")
             return if(cursor == v.length) null else {
                 state = toState
                 invoke(v, cursor)
@@ -124,7 +127,7 @@ object VOJson {
             buffer.clear()
             return invoke(v, c)
         }
-        private inline fun _readWhile(v:String, c:Int, skipLast:Boolean, block:(Char)->Boolean):V?{
+        private inline fun _readWhile(v:String, c:Int, isDropLast:Boolean, block:(Char)->Boolean):V?{
             var cursor = c
             var isFlushed = false
             do{
@@ -135,9 +138,10 @@ object VOJson {
                     break
                 }
             }while(cursor < v.length)
+            println("_readWhile $isFlushed, $flushed, ${cursor - if(isDropLast) 0 else 1}, ${v.getOrNull(cursor - if(isDropLast) 0 else 1)}, $v")
             return if(isFlushed){
                 state = toState
-                invoke(v, cursor + if(skipLast) 1 else 0)
+                invoke(v, cursor - if(isDropLast) 0 else 1)
             }else null
         }
         private inline fun _wordRead(word:String, v:String, c:Int):V?{
@@ -161,6 +165,7 @@ object VOJson {
         private inline fun _stringStart(v:String, c:Int):V?{
             if(v[c] != '"') throw Throwable("invalid string start")
             state = 11
+            println("_stringStart ${c + 1}, ${v.getOrNull(c + 1)}, $v")
             return invoke(v, c + 1)
         }
         private inline fun _stringRead(v:String, c:Int):V? = _readWhile(v, c, true){it != '"'}
@@ -199,16 +204,19 @@ object VOJson {
                 /** space before object*/
                 100->skipSpace(101, v, c)
                 /** object start */
-                101->if(v[c] != '{') throw Throwable("invalid object") else skipSpace(102, v, c + 1)
+                101->if(v[c] != '{') throw Throwable("invalid object $state, $c, ${v[c]}, $v") else skipSpace(102, v, c + 1)
                 /** object key */
                 102->stringRead(103, v, c)
                 103->{
+
                     key = flushed
+                    println("103 $state, $c, ${v[c]}, $v, $key")
                     skipSpace(104, v, c)
                 }
-                104->if(v[c] != ':') throw Throwable("invalid object") else skipSpace(105, v, c + 1)
+                104->if(v[c] != ':') throw Throwable("invalid object $state, $c, ${v[c]}, $v, $key") else skipSpace(105, v, c + 1)
                 105->{ /** vo space before value */
                     val it:Char = v[c]
+                    println("$state, $c, ${v[c]}, $v, $key")
                     when{
                         it == '"'-> stringRead(106, v, c)
                         "0123456789-.".indexOf(it) != -1->numRead(106, v, c)
@@ -234,17 +242,21 @@ object VOJson {
                     }
                 }
                 106->{ /** object value */
+                    println("$state-0, $c, ${v[c]}, $v, $key")
                     val (type, target) = targetStack.last()
+                    println("$state-1, $type, $target")
                     when{
                         type is VO->(target as VO)[key] = convert(vo.getFields()?.get(key)?.typeName ?: throw Throwable("invalid VO field"))
                         type is String && type.startsWith('m')->(target as MutableMap<String, Any>)[key] = convert(type.substring(1))
                         type is String && type.startsWith('l')->(target as MutableList<Any>).add(convert(type.substring(1)))
                         else->throw Throwable("invalid type $type")
                     }
-                    skipSpace(107, v, c + 1)
+                    println("$state-2, $type, $target")
+                    skipSpace(107, v, c)
                 }
                 107->{
                     val it:Char = v[c]
+                    println("$state, $c, ${v[c]}, $v, $key")
                     when(it){
                         ','->skipSpace(102, v, c + 1)
                         '}'->{
@@ -259,7 +271,7 @@ object VOJson {
                                     else->throw Throwable("invalid type $type")
                                 }
                             }
-                            skipSpace(107, v, c + 1)
+                            skipSpace(107, v, c)
                         }
                         else->throw Throwable("invalid object")
                     }
