@@ -142,7 +142,7 @@ object VOJson {
             var isFlushed = false
             do{
                 val it = v[cursor++]
-                if(buffer.length == 4){
+                if(buffer.length == word.length){
                     flushed = buffer.toString()
                     isFlushed = true
                     break
@@ -216,11 +216,11 @@ object VOJson {
 //                            invoke(v, cursor + 1)
 //
 //                        }
-//                        it == '{'->{
-//                            state = 160
-//                            invoke(v, cursor + 1)
-//
-//                        }
+                        it == '{'->{
+                            targetStack.add(Stack(vo[key]!!, vo, key))
+                            skipSpace(102, v, c + 1)
+
+                        }
                         else->throw Throwable("invalid VO value")
                     }
                 }
@@ -236,7 +236,6 @@ object VOJson {
                 }
                 107->{
                     val it:Char = v[c]
-                    println("$state, $c, ${v[c]}, $v, $key")
                     when(it){
                         ','->skipSpace(102, v, c + 1)
                         '}'->{
