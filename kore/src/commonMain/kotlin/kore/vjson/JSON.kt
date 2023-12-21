@@ -7,7 +7,6 @@ import kore.vo.field.value.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onCompletion
 
 object JSON{
     private val _converters:HashMap<Any, (String)->Any> = hashMapOf(
@@ -36,9 +35,6 @@ object JSON{
         val emitter:FlowCollector<V> = this
         val parser:Parser<V> = Parser(vo)
         value
-            .onCompletion{
-                emitter.emit(vo)
-            }
             .collect {
                 var str:String? = it
                 while(str != null) str = parser(str)?.let{(s, vo)->
@@ -133,7 +129,7 @@ class Parser<V:VO>(val vo:V){
                     '}'->{
                         if(stack.size == 1){
                             state = 1000
-                            return ""
+                            return null
                         }
                         val prev:Stack = curr
                         curr = stack.removeLast()
