@@ -3,6 +3,7 @@ package vo.json
 import kore.vjson.JSON
 import kore.vo.VO
 import kore.vo.field.list.*
+import kore.vo.field.map.*
 import kore.vo.field.value.*
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.last
@@ -86,6 +87,16 @@ class test1 {
         var hl  by ushortList
         var il  by ulongList
         var jl  by stringList
+        var am  by intMap
+        var bm  by shortMap
+        var cm  by longMap
+        var dm  by floatMap
+        var em  by doubleMap
+        var fm  by booleanMap
+        var gm  by uintMap
+        var hm  by ushortMap
+        var im  by ulongMap
+        var jm  by stringMap
     }
     @Test
     fun test3(){
@@ -97,16 +108,26 @@ class test1 {
                 emit(""""b":12""")
                 emit("""3, "c":121444, """)
                 emit(""""al":[1,2,3], """)
-                emit(""""bl":[1,2,3], """)
+                emit(""""am":{ "a": 1,"b" : 2, "c":3}, """)
+                emit(""""bl":[1,2,3], "i":3,""")
+                emit(""""dm":{ "a": 1.1,"b" : 2.1, "c":3.1}, """)
                 emit(""""cl":[1,2,3], """)
-                emit(""""dl":[1.1,2.2,3.3], """)
+                emit(""""jm":{ "a": "aew","bew" : "bwe", "c":"cds"}, """)
+                emit(""""dl":[1.1,2.2,3.3], "f":true, """)
                 emit(""""el":[1.1,2.1,3.1], """)
                 emit(""""fl":[true,false, true], """)
                 emit(""""gl":[1,2,3], """)
-                emit(""""hl":[1,2,3], """)
+                emit(""""fm":{ "a": true,"b" : false, "c":true}, """)
+                emit(""""hl":[1,2,3], "e":1.3, """)
+                emit(""""cm":{ "a": 1,"b" : 2, "c":3}, """)
                 emit(""""il":[1,2,3], """)
+                emit(""""bm":{ "a": 1,"b" : 2, "c":3}, """)
+                emit(""""em":{ "a": 1.3,"b" : 2.3, "c":3.3}, """)
+                emit(""""im":{ "a": 1,"b" : 2, "c":3}, """)
                 emit(""""jl":["a","b","c"], """)
-                emit(""""d":1.2, "e":1.3, "f":true, "g":1, "h":2, "i":3,""")
+                emit(""""gm":{ "a": 1,"b" : 2, "c":3}, """)
+                emit(""""d":1.2, "g":1, "h":2, """)
+                emit(""""hm":{ "a": 1,"b" : 2, "c":3}, """)
                 emit(""""j":"abc"}""")
             }).takeWhile { isContinue }
                 .last()
