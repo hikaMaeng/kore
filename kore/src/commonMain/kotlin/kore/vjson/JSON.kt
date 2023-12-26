@@ -1,32 +1,64 @@
-@file:Suppress("NOTHING_TO_INLINE", "FunctionName")
+@file:Suppress("NOTHING_TO_INLINE", "FunctionName", "UNCHECKED_CAST")
 
 package kore.vjson
 
 import kore.vo.VO
+import kore.vo.field.list.*
 import kore.vo.field.value.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 
 object JSON{
-    private val _converters:HashMap<Any, (String)->Any> = hashMapOf(
-        IntField::class to {it:String->it.toInt()},
-        ShortField::class to {it:String->it.toShort()},
-        LongField::class to {it:String->it.toLong()},
-        DoubleField::class to {it:String->it.toDouble()},
-        FloatField::class to {it:String->it.toFloat()},
-        BooleanField::class to {it:String->it.toBoolean()},
-        UIntField::class to {it:String->it.toUInt()},
-        UShortField::class to {it:String->it.toUShort()},
-        ULongField::class to {it:String->it.toULong()},
-        String::class to {it:String->it},
-        Int::class to {it:String->it.toInt()},
-        Double::class to {it:String->it.toDouble()},
-        Boolean::class to {it:String->it.toBoolean()},
-        VO::class to {it:String->it},
-        MutableList::class to {it:String->it},
-        MutableMap::class to {it:String->it},
-    )
+    private val _converters:HashMap<Any, (String)->Any> = HashMap<Any, (String)->Any>(100).also{
+        val cInt:(String)->Any = {it.toInt()}
+        val cShort:(String)->Any = {it.toShort()}
+        val cLong:(String)->Any = {it.toLong()}
+        val cFloat:(String)->Any = {it.toFloat()}
+        val cDouble:(String)->Any = {it.toDouble()}
+        val cBoolean:(String)->Any = {it.toBoolean()}
+        val cUInt:(String)->Any = {it.toUInt()}
+        val cUShort:(String)->Any = {it.toUShort()}
+        val cULong:(String)->Any = {it.toULong()}
+        val cString:(String)->Any = {it}
+
+        it[Int::class] = cInt
+        it[Short::class] = cShort
+        it[Long::class] = cLong
+        it[Float::class] = cFloat
+        it[Double::class] = cDouble
+        it[Boolean::class] = cBoolean
+        it[UInt::class] = cUInt
+        it[UShort::class] = cUShort
+        it[ULong::class] = cULong
+        it[String::class] = cString
+
+        it[IntField::class] = cInt
+        it[ShortField::class] = cShort
+        it[LongField::class] = cLong
+        it[FloatField::class] = cFloat
+        it[DoubleField::class] = cDouble
+        it[BooleanField::class] = cBoolean
+        it[UIntField::class] = cUInt
+        it[UShortField::class] = cUShort
+        it[ULongField::class] = cULong
+        it[StringField::class] = cString
+
+        it[IntListField::class] = cInt
+        it[ShortListField::class] = cShort
+        it[LongListField::class] = cLong
+        it[FloatListField::class] = cFloat
+        it[DoubleListField::class] = cDouble
+        it[BooleanListField::class] = cBoolean
+        it[UIntListField::class] = cUInt
+        it[UShortListField::class] = cUShort
+        it[ULongListField::class] = cULong
+        it[StringListField::class] = cString
+
+        it[VO::class] =  {it}
+        it[MutableList::class] = {it:String->it}
+        it[MutableMap::class] = {it:String->it}
+    }
     operator fun set(type:Any, converter:(String)->Any){
         _converters[type] = converter
     }
@@ -86,8 +118,8 @@ class Parser<V:VO>(val vo:V){
                     curr.key = flushed
                     skipSpace(104)
                 }
-                104->if(s[c++] == ':') skipSpace(105) else err("invalid colon next key")
-                105->{ /** vo space before value */
+                104->if(s[c++] == ':') skipSpace(105) else err("invalid colon next key, ${curr.key}--")
+                105->{ /** value or push stack */
                     val it:Char = s[c]
                     when{
                         it == '"'-> stringRead(106)
@@ -95,11 +127,22 @@ class Parser<V:VO>(val vo:V){
                         it == 't'->trueRead(106)
                         it == 'f'->falseRead(106)
                         it == 'n'->nullRead(106)
-//                        it == '['->{
-//                            state = 150
-//                            invoke(v, cursor + 1)
-//
-//                        }
+                        it == '['->{
+                            (curr.target as? VO)?.let{vo->
+                                stack.add(
+                                    Stack(
+                                        vo.getFields()?.get(curr.key)?.let{it::class} ?: err("invalid VO field"),
+                                        try{
+                                            vo[curr.key] ?: throw Throwable()
+                                        }catch(e:Throwable){
+                                            arrayListOf<Any>().also{vo[curr.key] = it}
+                                        }
+                                    ).also{curr = it}
+                                )
+                            }
+                            c++
+                            skipSpace(105)
+                        }
 //                        it == '{'->{
 //                            targetStack.add(VOJson.Updater.Stack(vo[key]!!, vo, key))
 //                            skipSpace(102, v, c + 1)
@@ -108,31 +151,34 @@ class Parser<V:VO>(val vo:V){
                         else->err("invalid VO value")
                     }
                 }
-                106->{ /** object value */
+                106->{ /** assign */
                     when{
                         curr.type is VO->(curr.target as? VO)?.let{
-                            it[curr.key] = JSON[vo.getFields()?.get(curr.key)?.let{it::class} ?: err("invalid VO field")](flushed)
+                            it[curr.key] = JSON[vo.getFields()?.get(curr.key)?.let{
+//                                println("---${curr.key} : ${it::class} -- $flushed, ${JSON[it::class]}, ${JSON[it::class](flushed)}")
+                                it::class
+                            } ?: err("invalid VO field")](flushed)
                             if(stack.size == 1){
                                 state = 107
                                 return s.substring(c)
                             }
                         }
-//                        type is String && type.startsWith('m')->(target as MutableMap<String, Any>)[key] = convert(type.substring(1))
-//                        type is String && type.startsWith('l')->(target as MutableList<Any>).add(convert(type.substring(1)))
-//                        else->throw Throwable("invalid type $type")
+                        curr.target is MutableList<*>->(curr.target as? MutableList<Any>)?.add(JSON[curr.type](flushed))
+                        else->err("invalid VO value")
                     }
                     skipSpace(108)
                 }
                 107->skipSpace(108)
-                108->when(s[c++]){
-                    ','->skipSpace(102)
-                    '}'->{
+                108->when(s[c++]){ /** next or pop stack */
+                    ','->skipSpace(if(curr.target is MutableList<*>) 105 else 102)
+                    '}', ']'->{
                         if(stack.size == 1){
                             state = 1000
                             return null
                         }
                         val prev:Stack = curr
-                        curr = stack.removeLast()
+                        stack.removeLast()
+                        curr = stack.last()
                         when{
                             curr.type is VO->(curr.target as? VO)?.let{
                                 it[curr.key] = prev.target
@@ -164,13 +210,15 @@ class Parser<V:VO>(val vo:V){
     }
     private inline fun wordRead(word:String){
         do{
-            val it = s[c++]
             if(buffer.length == word.length){
                 flushed = buffer.toString()
                 state = next
                 break
-            }else if(word[buffer.length] == it) buffer.append(it)
-            else err("invalid $word")
+            }else{
+                val it = s[c++]
+                if(word[buffer.length] == it) buffer.append(it)
+                else err("invalid $word")
+            }
         }while(c < s.length)
     }
     private inline fun skipSpace(to:Int) = prepare(to, 0, false)

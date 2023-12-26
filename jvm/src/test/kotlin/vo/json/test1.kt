@@ -2,8 +2,10 @@ package vo.json
 
 import kore.vjson.JSON
 import kore.vo.VO
-import kore.vo.field.value.int
+import kore.vo.field.list.*
+import kore.vo.field.value.*
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -61,6 +63,54 @@ class test1 {
                     isContinue = false
                 }
 
+        }
+    }
+    class Test3:VO(){
+        var a by int
+        var b by short
+        var c by long
+        var d by float
+        var e by double
+        var f by boolean
+        var g by uint
+        var h by ushort
+        var i by ulong
+        var j by string
+        var al  by intList
+        var bl  by shortList
+        var cl  by longList
+        var dl  by floatList
+        var el  by doubleList
+        var fl  by booleanList
+        var gl  by uintList
+        var hl  by ushortList
+        var il  by ulongList
+        var jl  by stringList
+    }
+    @Test
+    fun test3(){
+        runBlocking{
+            var isContinue = true
+            val vo = JSON.from(Test3(), flow{
+                emit("""{"a"""")
+                emit(""":1, """)
+                emit(""""b":12""")
+                emit("""3, "c":121444, """)
+                emit(""""al":[1,2,3], """)
+                emit(""""bl":[1,2,3], """)
+                emit(""""cl":[1,2,3], """)
+                emit(""""dl":[1.1,2.2,3.3], """)
+                emit(""""el":[1.1,2.1,3.1], """)
+                emit(""""fl":[true,false, true], """)
+                emit(""""gl":[1,2,3], """)
+                emit(""""hl":[1,2,3], """)
+                emit(""""il":[1,2,3], """)
+                emit(""""jl":["a","b","c"], """)
+                emit(""""d":1.2, "e":1.3, "f":true, "g":1, "h":2, "i":3,""")
+                emit(""""j":"abc"}""")
+            }).takeWhile { isContinue }
+                .last()
+            println(vo)
         }
     }
 }
