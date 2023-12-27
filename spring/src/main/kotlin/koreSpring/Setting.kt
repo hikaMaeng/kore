@@ -30,7 +30,7 @@ class Setting(e: Environment): WebMvcConfigurer {
     @Bean
     fun applicationTaskExecutor():AsyncTaskExecutor = TaskExecutorAdapter(Executors.newVirtualThreadPerTaskExecutor())
     @Bean
-    fun protocolHandlerVirtualThreadExecutorCustomizer():TomcatProtocolHandlerCustomizer<*> {
+    fun protocolHandlerVirtualThreadExecutorCustomizer():TomcatProtocolHandlerCustomizer<*>{
         return TomcatProtocolHandlerCustomizer { protocolHandler:ProtocolHandler->
             protocolHandler.executor = Executors.newVirtualThreadPerTaskExecutor()
         }

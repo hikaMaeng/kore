@@ -8,7 +8,7 @@
 //import kotlin.reflect.KProperty
 //import kotlin.test.Test
 //
-//abstract class eTable<T:eEntity>: ReadWriteProperty<eTable<T>, Any> {
+//abstract class eTable<T:eEntity>: ReadWriteProperty<eTable<T>, Any>{
 //    override fun getValue(thisRef:eTable<T>, property: KProperty<*>):Any{
 //        return this
 //    }

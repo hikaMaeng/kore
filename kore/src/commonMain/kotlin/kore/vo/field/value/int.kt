@@ -7,8 +7,8 @@ import kore.vo.field.Field
 import kore.vo.field.Prop
 import kore.vo.task.Task
 
-object IntField: Field<Int> {
-    override val typeName:String = "Int"
+object IntField:Field<Int>{
+    override fun defaultFactory():Int = 0
     class T:Task(){
         fun default(v:Int){
             _default = v

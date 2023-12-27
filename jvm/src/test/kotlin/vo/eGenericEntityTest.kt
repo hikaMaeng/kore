@@ -8,7 +8,7 @@
 //
 //interface IEntity
 //
-//class MEntity: IEntity, ReadWriteProperty<MEntity, Any> {
+//class MEntity: IEntity, ReadWriteProperty<MEntity, Any>{
 //    override fun getValue(thisRef: MEntity, property: KProperty<*>): Any {
 //        TODO("Not yet implemented")
 //    }

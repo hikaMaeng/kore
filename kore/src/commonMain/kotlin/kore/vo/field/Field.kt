@@ -3,5 +3,5 @@
 package kore.vo.field
 
 interface Field<VALUE:Any>{
-    val typeName:String
+    fun defaultFactory():VALUE
 }

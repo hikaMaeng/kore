@@ -5,14 +5,14 @@ package kore.vosn
 import kore.error.E
 import kore.vo.VO
 import kore.vo.converter.ToVONoInitialized
-import kore.vosn.VOSN.Cursor
-import kore.vosn.VOSN.Cursor.DecodeNoListTeminator
-import kore.vosn.VOSN.STRINGLIST_EMPTY_C
-import kore.vosn.VOSN.decodeString
 import kore.vo.field.*
 import kore.vo.field.list.*
 import kore.vo.field.map.*
 import kore.vo.field.value.*
+import kore.vosn.VOSN.Cursor
+import kore.vosn.VOSN.Cursor.DecodeNoListTeminator
+import kore.vosn.VOSN.STRINGLIST_EMPTY_C
+import kore.vosn.VOSN.decodeString
 import kore.wrap.W
 import kore.wrap.Wrap
 import kotlin.reflect.KClass
@@ -30,7 +30,7 @@ internal object From{
     class FromInvalidValue(val field:Field<*>, val target:String, val cursor:Int): E(field, target, cursor)
     class FromInvalidListValue(val field:Field<*>, val target:String, val index:Int): E(field, target, index)
     class FromInvalidMapValue(val field:Field<*>, val target:String, val key:String): E(field, target, key)
-    private inline fun from(cursor:Cursor, field: Field<*>):Wrap<Any>{
+    private inline fun from(cursor:Cursor, field:Field<*>):Wrap<Any>{
         return decoders[field::class]?.invoke(cursor, field) ?: W(FromNoDecoder(field, cursor.v, cursor.encoded))
     }
     internal fun <V:VO> vo(cursor:Cursor, vo:V):Wrap<V>{
@@ -53,16 +53,16 @@ internal object From{
         }
         return W(vo)
     }
-    private inline fun<VALUE:Any> value(cursor:Cursor, field: Field<*>, block:String.()->VALUE?):Wrap<VALUE>{
+    private inline fun<VALUE:Any> value(cursor:Cursor, field:Field<*>, block:String.()->VALUE?):Wrap<VALUE>{
         val target: String = cursor.nextValue
         return block(target)?.let{ W(it) } ?: W(FromInvalidValue(field, target, cursor.v))
     }
-    private inline fun <VALUE:Any> valueList(cursor: Cursor, field: Field<*>, crossinline block:String.()->Wrap<VALUE>):Wrap<List<VALUE>>{
+    private inline fun <VALUE:Any> valueList(cursor: Cursor, field:Field<*>, crossinline block:String.()->Wrap<VALUE>):Wrap<List<VALUE>>{
         return cursor.nextValueList.flatMap{list->
             list.flatMapList(block)
         }
     }
-    private inline fun <VALUE:Any> valueMap(cursor:Cursor, field: Field<*>, crossinline block:(String, String)->Wrap<VALUE>):Wrap<HashMap<String, VALUE>>{
+    private inline fun <VALUE:Any> valueMap(cursor:Cursor, field:Field<*>, crossinline block:(String, String)->Wrap<VALUE>):Wrap<HashMap<String, VALUE>>{
         return stringList(cursor).flatMap{
             it.flatMapListToMap(block)
         }

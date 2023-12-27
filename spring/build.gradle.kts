@@ -50,12 +50,12 @@ dependencies {
     testImplementation("io.projectreactor:reactor-test")
 }
 
-tasks.withType<KotlinCompile> {
+tasks.withType<KotlinCompile>{
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         jvmTarget = "21"
     }
 }
-tasks.withType<Test> {
+tasks.withType<Test>{
     useJUnitPlatform()
 }

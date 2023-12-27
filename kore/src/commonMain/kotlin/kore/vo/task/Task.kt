@@ -2,8 +2,8 @@
 
 package kore.vo.task
 
-import kore.vo.VO
 import kore.error.E
+import kore.vo.VO
 
 abstract class Task{
     fun interface Default{
@@ -30,17 +30,11 @@ abstract class Task{
             vo.values[key]
         }
     }
-    inline fun getTask(noinline block:(VO, String, Any)->Any?){
-        (_getTasks ?: arrayListOf<(VO, String, Any)->Any?>().also { _getTasks = it }).add(block)
-    }
-    inline fun setTask(noinline block:(VO, String, Any)->Any?){
-        (_setTasks ?: arrayListOf<(VO, String, Any)->Any?>().also { _setTasks = it }).add(block)
-    }
-    inline fun getFold(vo:VO, key:String, v:Any):Any = _getTasks?.fold(v){ acc, next->
-        next(vo, key, acc) ?: TaskFail("get", vo, key, acc).terminate()
-    } ?: v
-    inline fun setFold(vo:VO, key:String, v:Any):Any? = _setTasks?.fold(v){ acc, next->
-        next(vo, key, acc) ?: TaskFail("set", vo, key, acc).terminate()
+    inline fun getFold(vo:VO, key:String, v:Any):Any?
+    = if(_getTasks == null) v else
+        _getTasks?.fold(v as Any?){acc, next->acc?.let{next(vo, key, it)}}
+    inline fun setFold(vo:VO, key:String, v:Any):Any? = _setTasks?.fold(v as Any?){acc, next->
+        acc?.let{next(vo, key, it)}
     }
     fun exclude(){include = _exclude}
     fun optinal(){include = _optinal}

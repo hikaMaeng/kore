@@ -3,20 +3,20 @@
 package kore.vosn
 
 import kore.vo.VO
-import kore.vosn.VOSN.STRINGLIST_EMPTY
-import kore.vosn.VOSN.OPTIONAL_NULL
-import kore.vosn.VOSN.encodeString
-import kore.vo.field.*
-import kore.vo.task.Task
 import kore.vo.VOSum
 import kore.vo.converter.ToEnum
 import kore.vo.converter.ToInvalidSum
 import kore.vo.converter.ToNoEnum
 import kore.vo.converter.ToVONoInitialized
+import kore.vo.field.*
 import kore.vo.field.list.*
 import kore.vo.field.map.*
 import kore.vo.field.value.StringField
+import kore.vo.task.Task
 import kore.vo.task.Task.Companion._optinal
+import kore.vosn.VOSN.OPTIONAL_NULL
+import kore.vosn.VOSN.STRINGLIST_EMPTY
+import kore.vosn.VOSN.encodeString
 import kore.wrap.W
 import kore.wrap.Wrap
 import kore.wrap.wrap
@@ -37,7 +37,7 @@ internal object To{
             result.append(
                 vo[key]?.let{v->
                     if(include?.invoke(key, v) != false) {
-                        val field: Field<*> = fields[key] ?: return ToVONoInitialized(vo, "getField[$key]").wrap()
+                        val field:Field<*> = fields[key] ?: return ToVONoInitialized(vo, "getField[$key]").wrap()
                         to(field::class, v, field).getOrFailEffect { return it.wrap() }
                     }else ""
                 } ?: if(include == _optinal) OPTIONAL_NULL else ""

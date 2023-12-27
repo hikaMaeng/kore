@@ -16,7 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
-class VOTest1 {
+class VOTest2 {
     enum class Enum1{
         A,B,C
     }

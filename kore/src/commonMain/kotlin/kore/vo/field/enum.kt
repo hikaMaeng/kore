@@ -7,8 +7,8 @@ import kore.vo.task.Task
 import kore.vo.task.Task.Default
 import kotlin.reflect.KClass
 
-class EnumField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<ENUM> {
-    override val typeName:String = "Enum"
+class EnumField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<ENUM>{
+    override fun defaultFactory():ENUM = enums[0]
     class T<ENUM: Enum<ENUM>>:Task(){
         fun default(v:ENUM){
             _default = v
@@ -16,7 +16,7 @@ class EnumField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<ENUM> {
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out Enum<*>>, EnumField<out Enum<*>>> = hashMapOf()
-        inline operator fun <reified ENUM: Enum<ENUM>> invoke(): EnumField<ENUM> {
+        inline operator fun <reified ENUM: Enum<ENUM>> invoke(): EnumField<ENUM>{
             return fields.getOrPut(ENUM::class){ EnumField(enumValues<ENUM>()) } as EnumField<ENUM>
         }
     }
@@ -24,8 +24,8 @@ class EnumField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<ENUM> {
 inline fun <reified ENUM:Enum<ENUM>> VO.enum(): Prop<ENUM> = delegate(EnumField())
 inline fun <reified ENUM:Enum<ENUM>> VO.enum(v:ENUM): Prop<ENUM> = delegate(EnumField()){ EnumField.T<ENUM>().also{it.default(v)}}
 inline fun <reified ENUM:Enum<ENUM>> VO.enum(block: EnumField.T<ENUM>.()->Unit): Prop<ENUM> = delegate(EnumField(), block){ EnumField.T() }
-class EnumListField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<MutableList<ENUM>> {
-    override val typeName:String = "EnumList"
+class EnumListField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>):Field<MutableList<ENUM>>{
+    override fun defaultFactory():MutableList<ENUM> = arrayListOf()
     class T<ENUM: Enum<ENUM>>: Task(){
         fun default(v:MutableList<ENUM>){
             _default = Default{ _, _->ArrayList<ENUM>(v.size).also{it.addAll(v)}}
@@ -36,7 +36,7 @@ class EnumListField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<MutableList<
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out Enum<*>>, EnumListField<out Enum<*>>> = hashMapOf()
-        inline operator fun <reified ENUM: Enum<ENUM>> invoke(): EnumListField<ENUM> {
+        inline operator fun <reified ENUM: Enum<ENUM>> invoke(): EnumListField<ENUM>{
             return fields.getOrPut(ENUM::class){ EnumListField(enumValues<ENUM>()) } as EnumListField<ENUM>
         }
     }
@@ -48,8 +48,8 @@ inline fun <reified ENUM:Enum<ENUM>> VO.enumList(vararg v:ENUM): Prop<MutableLis
 = delegate(EnumListField()){ EnumListField.T<ENUM>().also{it.default(*v)}}
 inline fun <reified ENUM:Enum<ENUM>> VO.enumList(block: EnumListField.T<ENUM>.()->Unit): Prop<MutableList<ENUM>>
 = delegate(EnumListField(), block){ EnumListField.T() }
-class EnumMapField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<MutableMap<String, ENUM>> {
-    override val typeName:String = "EnumMap"
+class EnumMapField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<MutableMap<String, ENUM>>{
+    override fun defaultFactory():MutableMap<String, ENUM> = hashMapOf()
     class T<ENUM: Enum<ENUM>>: Task(){
         fun default(v:MutableMap<String, ENUM>){
             _default = Default{_,_->HashMap<String, ENUM>(v.size).also{it.putAll(v)}}
@@ -60,7 +60,7 @@ class EnumMapField<ENUM: Enum<ENUM>>(val enums:Array<ENUM>): Field<MutableMap<St
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out Enum<*>>, EnumMapField<out Enum<*>>> = hashMapOf()
-        inline operator fun <reified ENUM: Enum<ENUM>> invoke(): EnumMapField<ENUM> {
+        inline operator fun <reified ENUM: Enum<ENUM>> invoke(): EnumMapField<ENUM>{
             return fields.getOrPut(ENUM::class){ EnumMapField(enumValues<ENUM>()) } as EnumMapField<ENUM>
         }
     }

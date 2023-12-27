@@ -8,9 +8,9 @@ import kore.vo.field.Prop
 import kore.vo.field.list.LongListField.T
 import kore.vo.task.Task
 
-object LongListField: Field<MutableList<Long>> {
-    override val typeName:String = "LongList"
-    class T: Task(){
+object LongListField:Field<MutableList<Long>>{
+    override fun defaultFactory():MutableList<Long> = arrayListOf()
+    class T:Task(){
         fun default(v:MutableList<Long>){
             _default = Task.Default{_,_->ArrayList<Long>(v.size).also{it.addAll(v)}}
         }

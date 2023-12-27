@@ -18,7 +18,7 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
     val map:HashMap<String, String> = hashMapOf()
     val selectStr:String = items.foldIndexed(""){i, acc, item->
         acc + when(item){
-            is Item.Field -> {
+            is Item.Field ->{
                 val (alias, prop) = item.alias
                 map[prop] = item.to.ifEmpty { prop }
                 (if(i == 0) "" else ",") + "${alias.sqlName(this)}.$prop"
@@ -43,16 +43,16 @@ fun <FROM:VO, TO:VO, P1:VO, P2:VO, P3:VO, P4:VO> Select<FROM, TO>._sql(p1:P1, p2
     val whereStr:String = _where?.foldIndexed("\nWHERE ${shapeStr?.let{"$it and "}  ?: ""}"){i, acc, case->
         "$acc${if(i == 0) "" else " or "}(${case.items.foldIndexed(""){i2, acc2, item->
             acc2 + (if(i2 == 0) "" else " and ") + when(item){
-                is Case.Values -> {
+                is Case.Values ->{
                     val (alias, prop) = item.a
                     val index = joins.indexOf(alias.join)
                     "j$index.$prop${item.op}(${item.values.joinToString(","){if(it is String) "'$it'" else "it"}})"
                 }
-                is Case.Value -> {
+                is Case.Value ->{
                     val (alias, prop) = item.a
                     "${alias.sqlName(this)}.$prop${item.op}${if(item.value is String) "'${item.value}'" else "${item.value}"}"
                 }
-                is Case.Field -> {
+                is Case.Field ->{
                     val (aliasA, propA) = item.a
                     val (aliasB, propB) = item.b
                     "${aliasA.sqlName(this)}.$propA${item.op}${aliasB.sqlName(this)}.$propB"

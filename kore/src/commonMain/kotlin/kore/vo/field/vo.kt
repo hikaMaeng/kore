@@ -8,7 +8,7 @@ import kore.vo.task.Task.Default
 import kotlin.reflect.KClass
 
 class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
-    override val typeName:String = "VO"
+    override fun defaultFactory():V = factory()
     class T<V:VO>: Task(){
         fun default(block:()->V){
             _default = Default { _, _ -> block() }
@@ -22,7 +22,7 @@ class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
 inline fun <reified V:VO> VO.vo(noinline factory:()->V): Prop<V> = delegate(VOField[V::class, factory])
 inline fun <reified V:VO> VO.vo(noinline factory:()->V, block: VOField.T<V>.()->Unit): Prop<V> = delegate(VOField[V::class, factory], block){ VOField.T() }
 class VOListField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableList<V>>{
-    override val typeName:String = "VOList"
+    override fun defaultFactory():MutableList<V> = arrayListOf()
     class T<V:VO>: Task(){
         fun default(block:()->MutableList<V>){
             _default = Default{ _, _->
@@ -33,7 +33,7 @@ class VOListField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableLi
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOListField<out VO>> = hashMapOf()
-        inline operator fun <reified V: VO> get(cls:KClass<V>, noinline factory:()->V): VOListField<V> {
+        inline operator fun <reified V: VO> get(cls:KClass<V>, noinline factory:()->V): VOListField<V>{
             return fields.getOrPut(V::class){VOListField(cls, factory)} as VOListField<V>
         }
     }
@@ -44,7 +44,7 @@ inline fun <reified V:VO> VO.voListDefault(noinline factory:()->V, noinline bloc
 inline fun <reified V:VO> VO.voList(noinline factory:()->V, block: VOListField.T<V>.()->Unit): Prop<MutableList<V>>
 = delegate(VOListField[V::class, factory], block){ VOListField.T() }
 class VOMapField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableMap<String, V>>{
-    override val typeName:String = "VOMap"
+    override fun defaultFactory():MutableMap<String, V> = hashMapOf()
     class T<V:VO>: Task(){
         fun default(block:()->MutableMap<String, V>){
             _default = Default{_,_->
@@ -55,7 +55,7 @@ class VOMapField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableMap
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOMapField<out VO>> = hashMapOf()
-        inline operator fun <V: VO> get(cls:KClass<V>, noinline factory:()->V): VOMapField<V> {
+        inline operator fun <V: VO> get(cls:KClass<V>, noinline factory:()->V): VOMapField<V>{
             return fields.getOrPut(cls){VOMapField(cls, factory)} as VOMapField<V>
         }
     }

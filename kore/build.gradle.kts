@@ -16,7 +16,7 @@ kotlin {
                 freeCompilerArgs = listOf("-Xjsr305=strict", "-Xjvm-default=all")
             }
         }
-        configure<JavaPluginExtension> {
+        configure<JavaPluginExtension>{
             sourceCompatibility = JavaVersion.VERSION_21
             targetCompatibility = JavaVersion.VERSION_21
         }

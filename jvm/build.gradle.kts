@@ -19,12 +19,12 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC")
     testImplementation(kotlin("test"))
 }
-tasks.withType<KotlinCompile> {
+tasks.withType<KotlinCompile>{
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
         jvmTarget = "21"
     }
 }
-tasks.withType<Test> {
+tasks.withType<Test>{
     useJUnitPlatform()
 }

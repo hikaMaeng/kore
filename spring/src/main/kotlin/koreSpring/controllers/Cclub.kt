@@ -19,7 +19,7 @@ class Cclub {
 
     @ResponseBody
     @GetMapping("/club/list")
-    suspend fun list(): Flow<String> {
+    suspend fun list(): Flow<String>{
         return Club.select(Club) { club, rs ->
             select {
                 club { ::club_rowid }

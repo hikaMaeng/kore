@@ -8,9 +8,9 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 import kore.vo.task.Task.Default
 
-object FloatMapField: Field<MutableMap<String, Float>> {
-    override val typeName:String = "FloatMap"
-    class T: Task(){
+object FloatMapField:Field<MutableMap<String, Float>>{
+    override fun defaultFactory():MutableMap<String, Float> = hashMapOf()
+    class T:Task(){
         fun default(v:MutableMap<String, Float>){
             _default = Default{_,_->HashMap<String, Float>(v.size).also{it.putAll(v)}}
         }

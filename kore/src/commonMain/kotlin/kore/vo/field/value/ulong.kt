@@ -7,9 +7,9 @@ import kore.vo.field.Field
 import kore.vo.field.Prop
 import kore.vo.task.Task
 
-object ULongField: Field<ULong> {
-    override val typeName:String = "ULong"
-    class T: Task(){
+object ULongField:Field<ULong>{
+    override fun defaultFactory():ULong = 0u
+    class T:Task(){
         fun default(v:ULong){
             _default = v
         }

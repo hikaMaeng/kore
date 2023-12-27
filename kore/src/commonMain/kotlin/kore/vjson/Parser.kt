@@ -1,4 +1,4 @@
-@file:Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
+@file:Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE", "FunctionName")
 
 package kore.vjson
 
@@ -8,6 +8,7 @@ internal class Parser<V:VO>(val vo:V){
     private data class Stack(val type:Any, val target:Any, var key:String = "")
     private var curr:Stack = Stack(vo, vo)
     private val stack:ArrayList<Stack> = arrayListOf(curr)
+
     private var state:Int = 100
     private var next:Int = 0
     private var s:String = ""
@@ -16,18 +17,15 @@ internal class Parser<V:VO>(val vo:V){
     private var flushed:String = ""
     private inline fun err(msg:String):Nothing = throw Throwable(msg + " $state, $c, ${s[c]}, $s")
 
-    private val sequence:Iterator<Pair<String, V>?> = sequence{
-        while(true) yield(run()?.let{it to vo})
-    }.iterator()
     operator fun invoke(input:String):Pair<String, V>? = if(input.isEmpty()) null else{
         s = input
         c = 0
-        sequence.next()
+        run()?.let{it to vo}
     }
     private inline fun run():String?{
         while(c < s.length){
             when(state){
-                0->_skipSpace()
+                0->spaceRead()
                 10->if(s[c++] == '"') state = 11 else err("invalid string start")
                 11->readWhile(true){it != '"'}
                 20->readWhile(false){it in "0123456789-."}
@@ -42,34 +40,24 @@ internal class Parser<V:VO>(val vo:V){
                     skipSpace(104)
                 }
                 104->if(s[c++] == ':') skipSpace(105) else err("invalid colon next key, ${curr.key}--")
-                105->{ /** value or push stack */
-                    when(val it:Char = s[c]){
-                        '"'-> stringRead(106)
-                        '0','1','2','3','4','5','6','7','8','9','-','.'->numRead(106)
-                        't'->trueRead(106)
-                        'f'->falseRead(106)
-                        'n'->nullRead(106)
-                        '[','{'->{
-                            val (_, target, key) = curr
-                            when(target){
-                                is VO-> stack.add(
-                                    Stack(
-                                        target.getFields()?.get(key)?.let{it::class} ?: err("invalid VO field"),
-                                        try{
-                                            target[key] ?: throw Throwable()
-                                        }catch(e:Throwable){
-                                            if(it == '[') arrayListOf<Any>().also{target[key] = it}
-                                            else hashMapOf<String, Any>().also{target[key] = it}
-                                        }
-                                    ).also{curr = it}
-                                )
-                                else->err("invalid stack open")
-                            }
-                            c++
-                            nextItem()
+                105->when(s[c]){ /** value or push stack */
+                    '"'-> stringRead(106)
+                    '0','1','2','3','4','5','6','7','8','9','-','.'->numRead(106)
+                    't'->trueRead(106)
+                    'f'->falseRead(106)
+                    'n'->nullRead(106)
+                    '[','{'->{
+                        val (_, target, key) = curr
+                        when(target){
+                            is VO-> target.getFields()?.get(key)?.let{field->
+                                stack.add(Stack(field::class, target[key] ?: field.defaultFactory()).also{curr = it})
+                            } ?: err("invalid VO field")
+                            else->err("invalid stack open")
                         }
-                        else->err("invalid value")
+                        c++
+                        nextItem()
                     }
+                    else->err("invalid value")
                 }
                 106->{ /** assign */
                     val (type, target, key) = curr
@@ -150,7 +138,7 @@ internal class Parser<V:VO>(val vo:V){
             }
         }while(c < s.length)
     }
-    private inline fun _skipSpace(){
+    private inline fun spaceRead(){
         do{
             val it = s[c]
             if(" \t\n\r".indexOf(it) != -1) c++ else{

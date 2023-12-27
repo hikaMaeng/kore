@@ -18,7 +18,7 @@ class Test1 {
 //    @Test
 //    fun test1(){
 //
-//        val a = sequence<Int> {
+//        val a = sequence<Int>{
 //            yield(1)
 //            yield(2)
 //            yield(3)

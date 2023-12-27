@@ -80,7 +80,7 @@ object VOSN:Converter<String>{
     fun setTo(type:KClass<*>, block:(Any, Field<*>)->Wrap<String>){
         To.encoders[type] = block
     }
-    fun setFrom(type:KClass<*>, block:(cursor: Cursor, field: Field<*>)->Wrap<Any>){
+    fun setFrom(type:KClass<*>, block:(cursor: Cursor, Field:Field<*>)->Wrap<Any>){
         From.decoders[type] = block
     }
     override fun to(vo: VO):Wrap<String> = To.vo(vo)

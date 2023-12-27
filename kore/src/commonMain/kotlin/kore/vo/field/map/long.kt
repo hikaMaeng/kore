@@ -8,9 +8,9 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 import kore.vo.task.Task.Default
 
-object LongMapField: Field<MutableMap<String, Long>> {
-    override val typeName:String = "LongMap"
-    class T: Task(){
+object LongMapField:Field<MutableMap<String, Long>>{
+    override fun defaultFactory():MutableMap<String, Long> = hashMapOf()
+    class T:Task(){
         fun default(v:MutableMap<String, Long>){
             _default = Default{_,_->HashMap<String, Long>(v.size).also{it.putAll(v)}}
         }

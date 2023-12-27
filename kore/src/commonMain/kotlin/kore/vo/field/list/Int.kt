@@ -8,9 +8,9 @@ import kore.vo.field.Prop
 import kore.vo.field.list.IntListField.T
 import kore.vo.task.Task
 
-object IntListField: Field<MutableList<Int>> {
-    override val typeName:String = "IntList"
-    class T: Task(){
+object IntListField:Field<MutableList<Int>>{
+    override fun defaultFactory():MutableList<Int> = arrayListOf()
+    class T:Task(){
         fun default(v:MutableList<Int>){
             _default = Task.Default{_,_->ArrayList<Int>(v.size).also{it.addAll(v)}}
         }

@@ -7,9 +7,9 @@ import kore.vo.field.Field
 import kore.vo.field.Prop
 import kore.vo.task.Task
 
-object UShortListField: Field<MutableList<UShort>> {
-    override val typeName:String = "UShortList"
-    class T: Task(){
+object UShortListField:Field<MutableList<UShort>>{
+    override fun defaultFactory():MutableList<UShort> = arrayListOf()
+    class T:Task(){
         fun default(v:MutableList<UShort>){
             _default = Task.Default{_,_->ArrayList<UShort>(v.size).also{it.addAll(v)}}
         }

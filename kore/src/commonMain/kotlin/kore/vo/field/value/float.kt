@@ -7,9 +7,9 @@ import kore.vo.field.Field
 import kore.vo.field.Prop
 import kore.vo.task.Task
 
-object FloatField: Field<Float> {
-    override val typeName:String = "Float"
-    class T: Task(){
+object FloatField:Field<Float>{
+    override fun defaultFactory():Float = 0.0f
+    class T:Task(){
         fun default(v:Float){
             _default = v
         }

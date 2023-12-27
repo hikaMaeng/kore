@@ -13,7 +13,7 @@ import kotlin.test.Test
 
 class CustomMap:Map<String, String> by mapOf()
 
-class Test1 {
+class Test2 {
     class Member:VO(){
         companion object:()->Member by ::Member
         val rowid by int

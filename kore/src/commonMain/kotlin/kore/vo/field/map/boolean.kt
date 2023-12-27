@@ -8,9 +8,9 @@ import kore.vo.field.Prop
 import kore.vo.task.Task
 import kore.vo.task.Task.Default
 
-object BooleanMapField: Field<MutableMap<String, Boolean>> {
-    override val typeName:String = "BooleanMap"
-    class T: Task(){
+object BooleanMapField:Field<MutableMap<String, Boolean>>{
+    override fun defaultFactory():MutableMap<String, Boolean> = hashMapOf()
+    class T:Task(){
         fun default(v:MutableMap<String, Boolean>){
             _default = Default{_,_->HashMap<String, Boolean>(v.size).also{it.putAll(v)}}
         }

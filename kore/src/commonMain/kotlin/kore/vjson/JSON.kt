@@ -71,51 +71,98 @@ object JSON{
         it[UShortMapField::class] = cUShort
         it[ULongMapField::class] = cULong
         it[StringMapField::class] = cString
-
     }
-    private val emitters:HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit>(50).also{ map->
-        map[VOField::class] = emitVO
-        val emitValue:suspend FlowCollector<String>.(v:Any)->Unit = ToEmitter(0).f
-        arrayOf<KClass<*>>(IntField::class, IntField::class, ShortField::class, LongField::class, UIntField::class, UShortField::class, ULongField::class, FloatField::class, DoubleField::class, BooleanField::class).forEach {
-            map[it] = emitValue
-        }
-        map[StringField::class] = ToEmitter(1).f
-        val emitList:suspend FlowCollector<String>.(v: Any)->Unit = ToEmitter(2).f
-        arrayOf<KClass<*>>(StringListField::class, IntListField::class, ShortListField::class, LongListField::class, UIntListField::class, UShortListField::class, ULongListField::class, FloatListField::class, DoubleListField::class, BooleanListField::class).forEach {
-            map[it] = emitList
-        }
-        val emitMap:suspend FlowCollector<String>.(v:Any)->Unit = ToEmitter(3).f
-        arrayOf<KClass<*>>(StringMapField::class, IntMapField::class, ShortMapField::class, LongMapField::class, UIntMapField::class, UShortMapField::class, ULongMapField::class, FloatMapField::class, DoubleMapField::class, BooleanListField::class).forEach {
-            map[it] = emitMap
-        }
-    }
-    private val emitVO:suspend FlowCollector<String>.(Any)->Unit = {
-        val vo:VO = it as VO
-        val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "a").terminate()
-        val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "c").terminate()
-        val tasks:HashMap<String, Task>? = vo.getTasks()
-        emit("{")
-        val size:Int = keys.size
-        var i:Int = 0
-        do{
-            val key:String = keys[i]
-            vo[key]?.let{v->
-                val include:((String, Any?) -> Boolean)? = tasks?.get(key)?.include
-                if(include == null || include(key, v)) fields[key]?.let{ field->
-                    emitters[field::class]?.let{
-                        if(i != 0) emit(",")
-                        emit("\"$key\":")
-                        it(v)
-                    } ?: ToVONoInitialized(vo, "field:${field::class.simpleName}, v:$v").terminate()
+    private val stringifier:HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit>(50).also{target->
+        target[VOField::class] = {
+            val vo:VO = it as VO
+            val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "a").terminate()
+            val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "c").terminate()
+            val tasks:HashMap<String, Task>? = vo.getTasks()
+            emit("{")
+            val size:Int = keys.size
+            var i:Int = 0
+            do{
+                val key:String = keys[i]
+                vo[key]?.let{v->
+                    val include:((String, Any?) -> Boolean)? = tasks?.get(key)?.include
+                    if(include == null || include(key, v)) fields[key]?.let{field->
+                        target[field::class]?.let{
+                            if(i != 0) emit(",")
+                            emit("\"$key\":")
+                            it(v)
+                        } ?: ToVONoInitialized(vo, "field:${field::class.simpleName}, v:$v").terminate()
+                    }
                 }
-            }
-        }while(++i < size)
-        emit("}")
+            }while(++i < size)
+            emit("}")
+        }
+        val value:suspend FlowCollector<String>.(v:Any)->Unit = {emit("$it")}
+        target[IntField::class] = value
+        target[IntField::class] = value
+        target[ShortField::class] = value
+        target[LongField::class] = value
+        target[UIntField::class] = value
+        target[UShortField::class] = value
+        target[ULongField::class] = value
+        target[FloatField::class] = value
+        target[DoubleField::class] = value
+        target[BooleanField::class] = value
+        target[StringField::class] = {emit("\"$it\"")}
+
+        val list:suspend FlowCollector<String>.(v: Any)->Unit = {
+            it as List<Any>
+            emit("[")
+            val size:Int = it.size
+            var i:Int = 0
+            do{
+                if(i != 0) emit(",")
+                val v = it[i]
+                stringify(v::class, v)
+            }while(++i < size)
+            emit("]")
+        }
+        target[IntListField::class] = list
+        target[ShortListField::class] = list
+        target[LongListField::class] = list
+        target[UIntListField::class] = list
+        target[UShortListField::class] = list
+        target[ULongListField::class] = list
+        target[FloatListField::class] = list
+        target[DoubleListField::class] = list
+        target[BooleanListField::class] = list
+        target[StringListField::class] = list
+
+        val map:suspend FlowCollector<String>.(v:Any)->Unit = {
+            it as Map<String, Any>
+            val keys:Array<String> = it.keys.toTypedArray()
+            emit("{")
+            val size:Int = keys.size
+            var i:Int = 0
+            do{
+                if(i != 0) emit(",")
+                val v = it[keys[i]]!!
+                stringify(v::class, v)
+            }while(++i < size)
+            emit("}")
+        }
+        target[StringMapField::class] = map
+        target[IntMapField::class] = map
+        target[ShortMapField::class] = map
+        target[LongMapField::class] = map
+        target[UIntMapField::class] = map
+        target[UShortMapField::class] = map
+        target[ULongMapField::class] = map
+        target[FloatMapField::class] = map
+        target[DoubleMapField::class] = map
+        target[BooleanListField::class] = map
+    }
+    internal fun parseValue(type:Any, v:String):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(v)
+    private suspend inline fun FlowCollector<String>.stringify(type:KClass<*>, v:Any){
+        (stringifier[type] ?: throw Throwable("invalid stringify type $type"))(v)
     }
     fun setParser(type:Any, parser:(String)->Any){parsers[type] = parser}
-    fun parseValue(type:Any, v:String):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(v)
-    fun setStringify(type:KClass<*>, stringify:suspend FlowCollector<String>.(Any)->Unit){emitters[type] = stringify}
-    fun getStringify(type:KClass<*>):suspend FlowCollector<String>.(Any)->Unit = emitters[type] ?: throw Throwable("invalid stringify type $type")
+    fun setStringifier(type:KClass<*>, stringifier:suspend FlowCollector<String>.(Any)->Unit){
+        this.stringifier[type] = stringifier}
     fun <V:VO> from(vo:V, value:Flow<String>):Flow<V> = flow{
         val emitter:FlowCollector<V> = this
         val parser:Parser<V> = Parser(vo)
@@ -127,5 +174,5 @@ object JSON{
             }
         }
     }
-    fun to(vo:VO):Flow<String> = flow{emitVO(vo)}
+    fun to(vo:VO):Flow<String> = flow{stringify(VOField::class, vo)}
 }

@@ -4,12 +4,14 @@
 
 package kore.vo
 
-import kore.vo.field.*
+import kore.vo.field.Field
+import kore.vo.field.Prop
 import kore.vo.task.Task
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+
 abstract class VO(@PublishedApi internal val useInstanceField:Boolean = false){ /** 인스턴스에서 필드 정보를 기록할지 여부 */
     companion object{
         @PublishedApi internal val _voTasks:HashMap<KClass<out VO>, HashMap<String, Task>> = hashMapOf() /** 전역 태스크 저장소 */
@@ -20,7 +22,12 @@ abstract class VO(@PublishedApi internal val useInstanceField:Boolean = false){ 
         inline fun keys(type:KClass<out VO>):List<String>? = _voKeys[type] //type.qualifiedName
         private val _delegate:ReadWriteProperty<VO, Any> = object:ReadWriteProperty<VO, Any>{
             override fun getValue(vo:VO, property:KProperty<*>):Any = vo[property.name] ?: Task.NoDefault(vo, property.name).terminate()
-            override fun setValue(vo:VO, property:KProperty<*>, value: Any){ vo[property.name] = value }
+            override fun setValue(vo:VO, property:KProperty<*>, value: Any){
+                val key:String = property.name
+                vo.values[key] = vo.getTask(key)?.let{
+                    it.setFold(vo, key, value) ?: Task.TaskFail("set", vo, key, value).terminate()
+                } ?: value
+            }
         }
         @PublishedApi internal val _delegateProvider:PropertyDelegateProvider<VO, ReadWriteProperty<VO, Any>>
         = PropertyDelegateProvider{vo, prop ->
@@ -50,15 +57,14 @@ abstract class VO(@PublishedApi internal val useInstanceField:Boolean = false){ 
     @PublishedApi internal inline val values:MutableMap<String, Any?> get() = _values ?: hashMapOf<String, Any?>().also{ _values = it }
     inline val props:Map<String, Any?> get() = values /** 외부에 표출되는 저장소 */
     override fun toString():String = "${super.toString()}-${values.toList().joinToString{(k,v)->"$k:$v"}}"
+
     /** 속성 getter, setter*/
-    inline operator fun set(key:String, value:Any){values[key] = getTask(key)?.setFold(this, key, value) ?: value}
-    inline operator fun get(key:String):Any? = getTask(key)?.let{
-//        println("vo getTask, $key: ${it.getDefault(this, key)}, value:${values[key]}")
-        (values[key] ?: it.getDefault(this, key))?.let{v->it.getFold(this, key, v)}
-    } ?: run{
-//        println("vo no getTask, $key")
-        values[key]
+    inline operator fun set(key:String, value:Any){
+        values[key] = getTask(key)?.setFold(this, key, value) ?: value
     }
+    inline operator fun get(key:String):Any? = getTask(key)?.let{
+        (values[key] ?: it.getDefault(this, key))?.let{v->it.getFold(this, key, v)}
+    } ?: values[key]
     /** 전역 컨테이너용 키 */
     @PublishedApi internal var _id:KClass<out VO>? = null
     inline val voID:KClass<out VO> get() = _id ?: this::class.also {_id = it}//this::class.qualifiedName!!.also {_id = it}

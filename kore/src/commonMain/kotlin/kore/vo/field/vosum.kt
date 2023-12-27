@@ -9,7 +9,7 @@ import kore.vo.task.Task.Default
 import kotlin.reflect.KClass
 
 class VOSumField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<V>{
-    override val typeName:String = "Sum"
+    override fun defaultFactory():V = sum.factories[0]()
     class T<V:VO>: Task(){
         fun default(block:()->V){
             _default = Default { _, _ -> block() }
@@ -17,7 +17,7 @@ class VOSumField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<V>{
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOSumField<out VO>> = hashMapOf()
-        inline operator fun <V: VO> get(cls:KClass<out V>, sum: VOSum<V>): VOSumField<V> {
+        inline operator fun <V: VO> get(cls:KClass<out V>, sum: VOSum<V>): VOSumField<V>{
             return fields.getOrPut(cls){VOSumField(cls, sum)} as VOSumField<V>
         }
     }
@@ -25,7 +25,7 @@ class VOSumField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<V>{
 inline fun <reified V:VO> VO.sum(sum:VOSum<V>): Prop<V> = delegate(VOSumField[V::class, sum])
 inline fun <reified V:VO> VO.sum(sum:VOSum<V>, block: VOSumField.T<V>.()->Unit): Prop<V> = delegate(VOSumField[V::class, sum], block){ VOSumField.T() }
 class VOSumListField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<MutableList<V>>{
-    override val typeName:String = "SumList"
+    override fun defaultFactory():MutableList<V> = arrayListOf()
     class T<V:VO>: Task(){
         fun default(block:()->MutableList<V>){
             _default = Default{ _, _->
@@ -36,7 +36,7 @@ class VOSumListField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<Mu
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOSumListField<out VO>> = hashMapOf()
-        inline operator fun <V: VO> get(cls:KClass<out V>, sum: VOSum<V>): VOSumListField<V> {
+        inline operator fun <V: VO> get(cls:KClass<out V>, sum: VOSum<V>): VOSumListField<V>{
             return fields.getOrPut(cls){VOSumListField(cls, sum)} as VOSumListField<V>
         }
     }
@@ -47,7 +47,7 @@ inline fun <reified V:VO> VO.sumListDefault(sum:VOSum<V>, noinline block:()->Mut
 inline fun <reified V:VO> VO.sumList(sum:VOSum<V>, block: VOSumListField.T<V>.()->Unit): Prop<MutableList<V>>
         = delegate(VOSumListField[V::class, sum], block){ VOSumListField.T() }
 class VOSumMapField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<MutableMap<String, V>>{
-    override val typeName:String = "SumMap"
+    override fun defaultFactory():MutableMap<String, V> = hashMapOf()
     class T<V:VO>: Task(){
         fun default(block:()->MutableMap<String, V>){
             _default = Default{_,_->
@@ -58,7 +58,7 @@ class VOSumMapField<V: VO>(val cls:KClass<out VO>, val sum: VOSum<V>): Field<Mut
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOSumMapField<out VO>> = hashMapOf()
-        inline operator fun <V: VO> get(cls:KClass<out V>, sum: VOSum<V>): VOSumMapField<V> {
+        inline operator fun <V: VO> get(cls:KClass<out V>, sum: VOSum<V>): VOSumMapField<V>{
             return fields.getOrPut(cls){VOSumMapField(cls, sum)} as VOSumMapField<V>
         }
     }
