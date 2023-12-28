@@ -16,7 +16,7 @@ class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOField<out VO>> = hashMapOf()
-        inline operator fun <V: VO> get(cls:KClass<V>, noinline factory:()->V): VOField<V> = fields.getOrPut(cls){VOField(cls, factory)} as VOField<V>
+        inline operator fun <V:VO> get(cls:KClass<V>, noinline factory:()->V): VOField<V> = fields.getOrPut(cls){VOField(cls, factory)} as VOField<V>
     }
 }
 inline fun <reified V:VO> VO.vo(noinline factory:()->V): Prop<V> = delegate(VOField[V::class, factory])

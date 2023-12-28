@@ -3,6 +3,8 @@
 package kore.json
 
 import kore.vo.VO
+import kore.vo.field.VOListField
+import kore.vo.field.VOMapField
 
 internal class Parser<V:VO>(val vo:V){
     private data class Stack(val type:Any, val target:Any, var key:String = "")
@@ -47,13 +49,21 @@ internal class Parser<V:VO>(val vo:V){
                     'f'->falseRead(106)
                     'n'->nullRead(106)
                     '[','{'->{
-                        val (_, target, key) = curr
+                        val (type, target, key) = curr
                         when(target){
                             is VO-> target.getFields()?.get(key)?.let{field->
-                                stack.add(Stack(field::class, target[key] ?: field.defaultFactory()).also{curr = it})
+                                stack.add(Stack(field, target[key] ?: field.defaultFactory()).also{curr = it})
                             } ?: err("invalid VO field")
-//                            is MutableList<*>->
-//                            is MutableMap<*, *>->
+                            is MutableList<*>->{
+                                (type as VOListField<*>).factory().let {vo->
+                                    stack.add(Stack(vo, vo).also {curr = it})
+                                }
+                            }
+                            is MutableMap<*, *>->{
+                                (type as VOMapField<*>).factory().let {vo->
+                                    stack.add(Stack(vo, vo).also {curr = it})
+                                }
+                            }
                             else->err("invalid stack open")
                         }
                         c++
@@ -65,14 +75,17 @@ internal class Parser<V:VO>(val vo:V){
                     val (type, target, key) = curr
                     when(target){
                          is VO->{
-                            target[key] = JSON.parseValue(target.getFields()?.get(key)?.let{it::class} ?: err("invalid VO field"), flushed)
-                            if(stack.size == 1){
-                                state = 107
-                                return s.substring(c)
-                            }
+                             target.getFields()?.get(key)?.let{f->
+                                 target[key] = JSON.parseValue(f::class, f, flushed)
+                                 if(stack.size == 1){
+                                     state = 107
+                                     return s.substring(c)
+                                 }
+                             } ?: err("invalid VO field")
+
                         }
-                        is MutableList<*>->(target as? MutableList<Any>)?.add(JSON.parseValue(type, flushed))
-                        is MutableMap<*, *>->(target as? MutableMap<String, Any>)?.put(key, JSON.parseValue(type, flushed))
+                        is MutableList<*>->(target as? MutableList<Any>)?.add(JSON.parseValue(type::class, type, flushed))
+                        is MutableMap<*, *>->(target as? MutableMap<String, Any>)?.put(key, JSON.parseValue(type::class, type, flushed))
                         else->err("invalid value")
                     }
                     skipSpace(108)

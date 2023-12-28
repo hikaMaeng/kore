@@ -2,10 +2,10 @@ package json
 
 import kore.json.JSON
 import kore.vo.VO
+import kore.vo.field.*
 import kore.vo.field.list.*
 import kore.vo.field.map.*
 import kore.vo.field.value.*
-import kore.vo.field.vo
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.last
@@ -144,7 +144,6 @@ class test1 {
             assertEquals(mapOf("a" to "aew", "bew" to "bwe", "c" to "cds"), vo.jm)
         }
     }
-
     class Test3:VO(){
         class Sub:VO(){
             var a by int
@@ -174,6 +173,79 @@ class test1 {
             assertEquals(vo.b.a, parsed.b.a)
             assertEquals(vo.b.b, parsed.b.b)
             assertEquals(vo.c, parsed.c)
+        }
+    }
+    class Test4:VO(){
+        class Sub:VO(){
+            var a by int
+            var b by string
+        }
+        var a by int
+        var b by voList(::Sub)
+        var c by voMap(::Sub)
+    }
+    @Test
+    fun test4(){
+        runBlocking{
+            val vo = Test4().also {
+                it.a = 1
+                it.b = arrayListOf(Test4.Sub().also {
+                    it.a = 2
+                    it.b = "abc"
+                }, Test4.Sub().also {
+                    it.a = 3
+                    it.b = "def"
+                })
+                it.c = hashMapOf("a" to Test4.Sub().also {
+                    it.a = 4
+                    it.b = "ghi"
+                }, "b" to Test4.Sub().also {
+                    it.a = 5
+                    it.b = "jkl"
+                })
+            }
+            val str = JSON.to(vo).fold(""){acc, c->
+                acc + c
+            }
+            assertEquals(str, """{"a":1,"b":[{"a":2,"b":"abc"},{"a":3,"b":"def"}],"c":{"a":{"a":4,"b":"ghi"},"b":{"a":5,"b":"jkl"}}}""")
+            //val str = """{"a":1,"b":[{"a":2,"b":"abc"},{"a":3,"b":"def"}],"c":{"a":{"a":4,"b":"ghi"},"b":{"a":5,"b":"jkl"}}}"""
+            val parsed = JSON.from(Test4(), flow{emit(str)}).last()
+            assertEquals(vo.a, parsed.a)
+            assertEquals(vo.b[0].a, parsed.b[0].a)
+            assertEquals(vo.b[0].b, parsed.b[0].b)
+            assertEquals(vo.b[1].a, parsed.b[1].a)
+            assertEquals(vo.b[1].b, parsed.b[1].b)
+            assertEquals(vo.c["a"]?.a, parsed.c["a"]?.a)
+            assertEquals(vo.c["a"]?.b, parsed.c["a"]?.b)
+            assertEquals(vo.c["b"]?.a, parsed.c["b"]?.a)
+            assertEquals(vo.c["b"]?.b, parsed.c["b"]?.b)
+        }
+    }
+    class Test5:VO(){
+        enum class E{A, B, C}
+        var a by enum<E>()
+        var b by enumList<E>()
+        var c by enumMap<E>()
+    }
+    @Test
+    fun test5(){
+        runBlocking{
+            val vo = Test5().also {
+                it.a = Test5.E.B
+                it.b = arrayListOf(Test5.E.A, Test5.E.C)
+                it.c = hashMapOf("a" to Test5.E.A, "b" to Test5.E.C)
+            }
+            val str = JSON.to(vo).fold(""){acc, c->
+                acc + c
+            }
+            assertEquals(str, """{"a":1,"b":[0,2],"c":{"a":0,"b":2}}""")
+            val parsed = JSON.from(Test5(), flow{emit(str)}).last()
+            assertEquals(vo.a, parsed.a)
+            assertEquals(vo.b[0], parsed.b[0])
+            assertEquals(vo.b[1], parsed.b[1])
+            assertEquals(vo.c["a"], parsed.c["a"])
+            assertEquals(vo.c["b"], parsed.c["b"])
+
         }
     }
 }

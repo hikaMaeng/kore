@@ -4,10 +4,10 @@ package kore.json
 
 import kore.vo.VO
 import kore.vo.converter.ToNoConverter
+import kore.vo.converter.ToNoEnum
 import kore.vo.converter.ToNullField
 import kore.vo.converter.ToVONoInitialized
-import kore.vo.field.Field
-import kore.vo.field.VOField
+import kore.vo.field.*
 import kore.vo.field.list.*
 import kore.vo.field.map.*
 import kore.vo.field.value.*
@@ -18,17 +18,17 @@ import kotlinx.coroutines.flow.flow
 import kotlin.reflect.KClass
 
 object JSON{
-    private val parsers:HashMap<Any, (String)->Any> = HashMap<Any, (String)->Any>(100).also{
-        val cInt:(String)->Any = {it.toInt()}
-        val cShort:(String)->Any = {it.toShort()}
-        val cLong:(String)->Any = {it.toLong()}
-        val cFloat:(String)->Any = {it.toFloat()}
-        val cDouble:(String)->Any = {it.toDouble()}
-        val cBoolean:(String)->Any = {it.toBoolean()}
-        val cUInt:(String)->Any = {it.toUInt()}
-        val cUShort:(String)->Any = {it.toUShort()}
-        val cULong:(String)->Any = {it.toULong()}
-        val cString:(String)->Any = {it}
+    private val parsers:HashMap<Any, (Any, String)->Any> = HashMap<Any, (Any, String)->Any>(100).also{
+        val cInt:(Any, String)->Any = {_, v->v.toInt()}
+        val cShort:(Any, String)->Any = {_, v->v.toShort()}
+        val cLong:(Any, String)->Any = {_, v->v.toLong()}
+        val cFloat:(Any, String)->Any = {_, v->v.toFloat()}
+        val cDouble:(Any, String)->Any = {_, v->v.toDouble()}
+        val cBoolean:(Any, String)->Any = {_, v->v.toBoolean()}
+        val cUInt:(Any, String)->Any = {_, v->v.toUInt()}
+        val cUShort:(Any, String)->Any = {_, v->v.toUShort()}
+        val cULong:(Any, String)->Any = {_, v->v.toULong()}
+        val cString:(Any, String)->Any = {_, v->v}
 
         it[Int::class] = cInt
         it[Short::class] = cShort
@@ -73,6 +73,22 @@ object JSON{
         it[UShortMapField::class] = cUShort
         it[ULongMapField::class] = cULong
         it[StringMapField::class] = cString
+
+        it[EnumField::class] = {field, v->
+            val enums:Array<*> = (field as EnumField<*>).enums
+            val index:Int = v.toInt()
+            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+        }
+        it[EnumListField::class] = {field, v->
+            val enums:Array<*> = (field as EnumListField<*>).enums
+            val index:Int = v.toInt()
+            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+        }
+        it[EnumMapField::class] = {field, v->
+            val enums:Array<*> = (field as EnumListField<*>).enums
+            val index:Int = v.toInt()
+            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+        }
     }
     private val stringifier:HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit>(50).also{target->
         target[VOField::class] = {
@@ -113,19 +129,21 @@ object JSON{
         target[DoubleField::class] = value
         target[BooleanField::class] = value
         target[StringField::class] = {emit("\"$it\"")}
-
-        val list:suspend FlowCollector<String>.(v: Any)->Unit = {
+        target[EnumField::class] = {emit("${(it as Enum<*>).ordinal}")}
+        fun getList(block:suspend FlowCollector<String>.(Any)->Unit):suspend FlowCollector<String>.(v: Any)->Unit = {
             it as List<Any>
             emit("[")
             val size:Int = it.size
             var i:Int = 0
             do{
                 if(i != 0) emit(",")
-                val v = it[i]
-                stringify(v::class, v)
-            }while(++i < size)
+                block(it[i++])
+            }while(i < size)
             emit("]")
         }
+        target[VOListField::class] = getList{stringify(VOField::class, it)}
+        target[EnumListField::class] = getList{stringify(EnumField::class, it)}
+        val list:suspend FlowCollector<String>.(v: Any)->Unit = getList{stringify(it::class, it)}
         target[IntListField::class] = list
         target[ShortListField::class] = list
         target[LongListField::class] = list
@@ -136,8 +154,7 @@ object JSON{
         target[DoubleListField::class] = list
         target[BooleanListField::class] = list
         target[StringListField::class] = list
-
-        val map:suspend FlowCollector<String>.(v:Any)->Unit = {
+        fun getMap(block:suspend FlowCollector<String>.(Any)->Unit):suspend FlowCollector<String>.(v: Any)->Unit = {
             it as Map<String, Any>
             val keys:Array<String> = it.keys.toTypedArray()
             emit("{")
@@ -145,11 +162,15 @@ object JSON{
             var i:Int = 0
             do{
                 if(i != 0) emit(",")
-                val v = it[keys[i]]!!
-                stringify(v::class, v)
-            }while(++i < size)
+                val key:String = keys[i++]
+                emit("\"$key\":")
+                block(it[key]!!)
+            }while(i < size)
             emit("}")
         }
+        target[VOMapField::class] = getMap{stringify(VOField::class, it)}
+        target[EnumMapField::class] = getMap{stringify(EnumField::class, it)}
+        val map:suspend FlowCollector<String>.(v:Any)->Unit = getMap{stringify(it::class, it)}
         target[StringMapField::class] = map
         target[IntMapField::class] = map
         target[ShortMapField::class] = map
@@ -161,11 +182,11 @@ object JSON{
         target[DoubleMapField::class] = map
         target[BooleanListField::class] = map
     }
-    internal fun parseValue(type:Any, v:String):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(v)
+    internal fun parseValue(type:Any, field:Any, v:String):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(field, v)
     private suspend inline fun FlowCollector<String>.stringify(type:KClass<*>, v:Any){
         (stringifier[type] ?: throw Throwable("invalid stringify type $type"))(v)
     }
-    fun setParser(type:Any, parser:(String)->Any){parsers[type] = parser}
+    fun setParser(type:Any, parser:(Any, String)->Any){parsers[type] = parser}
     fun setStringifier(type:KClass<*>, stringifier:suspend FlowCollector<String>.(Any)->Unit){
         this.stringifier[type] = stringifier}
     fun <V:VO> from(vo:V, value:Flow<String>):Flow<V> = flow{
