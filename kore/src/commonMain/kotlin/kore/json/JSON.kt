@@ -1,8 +1,10 @@
 @file:Suppress("NOTHING_TO_INLINE", "FunctionName", "UNCHECKED_CAST")
 
-package kore.vjson
+package kore.json
 
 import kore.vo.VO
+import kore.vo.converter.ToNoConverter
+import kore.vo.converter.ToNullField
 import kore.vo.converter.ToVONoInitialized
 import kore.vo.field.Field
 import kore.vo.field.VOField
@@ -75,23 +77,26 @@ object JSON{
     private val stringifier:HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit>(50).also{target->
         target[VOField::class] = {
             val vo:VO = it as VO
-            val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "a").terminate()
-            val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "c").terminate()
+            val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "no fields").terminate()
+            val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "no keys").terminate()
             val tasks:HashMap<String, Task>? = vo.getTasks()
             emit("{")
             val size:Int = keys.size
             var i:Int = 0
             do{
                 val key:String = keys[i]
-                vo[key]?.let{v->
-                    val include:((String, Any?) -> Boolean)? = tasks?.get(key)?.include
-                    if(include == null || include(key, v)) fields[key]?.let{field->
-                        target[field::class]?.let{
-                            if(i != 0) emit(",")
-                            emit("\"$key\":")
-                            it(v)
-                        } ?: ToVONoInitialized(vo, "field:${field::class.simpleName}, v:$v").terminate()
+                val include:((String, Any?) -> Boolean)? = tasks?.get(key)?.include
+                val v:Any? = vo[key]
+                if(v != null){
+                    if(include == null || include(key, v)){
+                        val field:Field<*> = fields[key] ?: ToVONoInitialized(vo, "key:$key, v:$v").terminate()
+                        val converter:suspend FlowCollector<String>.(Any)->Unit = target[field::class] ?: ToNoConverter(vo, "field:${field::class.simpleName}, key:$key, v:$v").terminate()
+                        if(i != 0) emit(",")
+                        emit("\"$key\":")
+                        converter(v)
                     }
+                }else{
+                    if(include?.let{f->f == Task.EXCLUDE || f == Task.OPTIONAL || f(key, v)} != false) ToNullField(vo, "key:$key, v:$v").terminate()
                 }
             }while(++i < size)
             emit("}")

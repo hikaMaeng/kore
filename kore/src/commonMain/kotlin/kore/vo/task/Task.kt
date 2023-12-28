@@ -12,14 +12,14 @@ abstract class Task{
     class NoDefault(val vo:VO, val name:String):E(name)
     class TaskFail(val type:String, val vo:VO, val key:String, val result:Any):E(result)
     companion object{
-        @PublishedApi internal val _include:(String, Any?)->Boolean = {_, _->true}
-        @PublishedApi internal val _exclude:(String, Any?)->Boolean = {_, _->false}
-        @PublishedApi internal val _optinal:(String, Any?)->Boolean = {_, v->v != null}
+        val INCLUDE:(String, Any?)->Boolean = {_, _->true}
+        val EXCLUDE:(String, Any?)->Boolean = {_, _->false}
+        val OPTIONAL:(String, Any?)->Boolean = {_, v->v != null}
     }
     @PublishedApi internal var _default:Any? = null
     @PublishedApi internal var _setTasks:ArrayList<(VO, String, Any)->Any?>? = null
     @PublishedApi internal var _getTasks:ArrayList<(VO, String, Any)->Any?>? = null
-    var include:(String, Any?)->Boolean = _include
+    var include:(String, Any?)->Boolean = INCLUDE
         internal set
     inline fun getDefault(vo:VO, key:String):Any? = _default?.let{
         when(it){
@@ -36,8 +36,8 @@ abstract class Task{
     inline fun setFold(vo:VO, key:String, v:Any):Any? = _setTasks?.fold(v as Any?){acc, next->
         acc?.let{next(vo, key, it)}
     }
-    fun exclude(){include = _exclude}
-    fun optinal(){include = _optinal}
+    fun exclude(){include = EXCLUDE}
+    fun optinal(){include = OPTIONAL}
     fun isInclude(block:(String, Any?)->Boolean){include = block}
     fun default(block:Default){_default = block}
 }

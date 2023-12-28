@@ -1,10 +1,11 @@
 package json
 
-import kore.vjson.JSON
+import kore.json.JSON
 import kore.vo.VO
 import kore.vo.field.list.*
 import kore.vo.field.map.*
 import kore.vo.field.value.*
+import kore.vo.field.vo
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.last
@@ -29,10 +30,22 @@ class test1 {
     @Test
     fun test1(){
         runBlocking{
-            val str = JSON.to(Test1()).fold(""){acc, c->
+            val vo = Test1().also {
+                it.a = 1
+                it.b = 123.toShort()
+                it.c = 121444L
+                it.d = 1.2f
+                it.e = 1.3
+                it.f = true
+                it.g = 1u
+                it.h = 2u
+                it.i = 3u
+                it.j = "abc"
+            }
+            val str = JSON.to(vo).fold(""){acc, c->
                 acc + c
             }
-            println(str)
+            assertEquals(str, """{"a":1,"b":123,"c":121444,"d":1.2,"e":1.3,"f":true,"g":1,"h":2,"i":3,"j":"abc"}""")
         }
     }
     class Test2:VO(){
@@ -68,10 +81,10 @@ class test1 {
         var jm  by stringMap
     }
     @Test
-    fun test2(){
-        runBlocking{
+    fun test2() {
+        runBlocking {
             var isContinue = true
-            val vo = JSON.from(Test2(), flow{
+            val vo = JSON.from(Test2(), flow {
                 emit("""{"a"""")
                 emit(""":1, """)
                 emit(""""b":12""")
@@ -98,8 +111,7 @@ class test1 {
                 emit(""""d":1.2, "g":1, "h":2, """)
                 emit(""""hm":{ "a": 1,"b" : 2, "c":3}, """)
                 emit(""""j":"abc"}""")
-            }).takeWhile { isContinue }
-                .last()
+            }).takeWhile {isContinue}.last()
             assertEquals(1, vo.a)
             assertEquals(123.toShort(), vo.b)
             assertEquals(121444L, vo.c)
@@ -110,16 +122,16 @@ class test1 {
             assertEquals(2u, vo.h)
             assertEquals(3u, vo.i)
             assertEquals("abc", vo.j)
-            assertEquals(listOf(1,2,3), vo.al)
-            assertEquals(listOf(1.toShort(),2.toShort(),3.toShort()), vo.bl)
-            assertEquals(listOf(1L,2L,3L), vo.cl)
-            assertEquals(listOf(1.1f,2.2f,3.3f), vo.dl)
-            assertEquals(listOf(1.1,2.1,3.1), vo.el)
-            assertEquals(listOf(true,false,true), vo.fl)
-            assertEquals(listOf(1u,2u,3u), vo.gl)
-            assertEquals(listOf(1.toUShort(),2.toUShort(),3.toUShort()), vo.hl)
-            assertEquals(listOf(1.toULong(),2.toULong(),3.toULong()), vo.il)
-            assertEquals(listOf("a","b","c"), vo.jl)
+            assertEquals(listOf(1, 2, 3), vo.al)
+            assertEquals(listOf(1.toShort(), 2.toShort(), 3.toShort()), vo.bl)
+            assertEquals(listOf(1L, 2L, 3L), vo.cl)
+            assertEquals(listOf(1.1f, 2.2f, 3.3f), vo.dl)
+            assertEquals(listOf(1.1, 2.1, 3.1), vo.el)
+            assertEquals(listOf(true, false, true), vo.fl)
+            assertEquals(listOf(1u, 2u, 3u), vo.gl)
+            assertEquals(listOf(1.toUShort(), 2.toUShort(), 3.toUShort()), vo.hl)
+            assertEquals(listOf(1.toULong(), 2.toULong(), 3.toULong()), vo.il)
+            assertEquals(listOf("a", "b", "c"), vo.jl)
             assertEquals(mapOf("a" to 1, "b" to 2, "c" to 3), vo.am)
             assertEquals(mapOf("a" to 1.toShort(), "b" to 2.toShort(), "c" to 3.toShort()), vo.bm)
             assertEquals(mapOf("a" to 1L, "b" to 2L, "c" to 3L), vo.cm)
@@ -130,6 +142,38 @@ class test1 {
             assertEquals(mapOf("a" to 1.toUShort(), "b" to 2.toUShort(), "c" to 3.toUShort()), vo.hm)
             assertEquals(mapOf("a" to 1.toULong(), "b" to 2.toULong(), "c" to 3.toULong()), vo.im)
             assertEquals(mapOf("a" to "aew", "bew" to "bwe", "c" to "cds"), vo.jm)
+        }
+    }
+
+    class Test3:VO(){
+        class Sub:VO(){
+            var a by int
+            var b by string
+        }
+        var a by int
+        var b by vo(::Sub)
+        var c by string
+    }
+    @Test
+    fun test3(){
+        runBlocking{
+            val vo = Test3().also {
+                it.a = 1
+                it.b = Test3.Sub().also {
+                    it.a = 2
+                    it.b = "abc"
+                }
+                it.c = "def"
+            }
+            val str = JSON.to(vo).fold(""){acc, c->
+                acc + c
+            }
+            assertEquals(str, """{"a":1,"b":{"a":2,"b":"abc"},"c":"def"}""")
+            val parsed = JSON.from(Test3(), flow{emit(str)}).last()
+            assertEquals(vo.a, parsed.a)
+            assertEquals(vo.b.a, parsed.b.a)
+            assertEquals(vo.b.b, parsed.b.b)
+            assertEquals(vo.c, parsed.c)
         }
     }
 }

@@ -1,8 +1,7 @@
-import kore.vjson.VOJson
+import kore.json.VOJson
 import kore.vo.VO
 import kore.vo.field.value.int
 import kore.vo.field.value.string
-import kore.vosn.toVOSN
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onCompletion
 

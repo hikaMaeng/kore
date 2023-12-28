@@ -13,7 +13,7 @@ import kore.vo.field.list.*
 import kore.vo.field.map.*
 import kore.vo.field.value.StringField
 import kore.vo.task.Task
-import kore.vo.task.Task.Companion._optinal
+import kore.vo.task.Task.Companion.OPTIONAL
 import kore.vosn.VOSN.OPTIONAL_NULL
 import kore.vosn.VOSN.STRINGLIST_EMPTY
 import kore.vosn.VOSN.encodeString
@@ -40,7 +40,7 @@ internal object To{
                         val field:Field<*> = fields[key] ?: return ToVONoInitialized(vo, "getField[$key]").wrap()
                         to(field::class, v, field).getOrFailEffect { return it.wrap() }
                     }else ""
-                } ?: if(include == _optinal) OPTIONAL_NULL else ""
+                } ?: if(include == OPTIONAL) OPTIONAL_NULL else ""
             ).append("|")
         }
         return W(result.toString())

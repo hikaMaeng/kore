@@ -1,6 +1,6 @@
 @file:Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE", "FunctionName")
 
-package kore.vjson
+package kore.json
 
 import kore.vo.VO
 
@@ -52,6 +52,8 @@ internal class Parser<V:VO>(val vo:V){
                             is VO-> target.getFields()?.get(key)?.let{field->
                                 stack.add(Stack(field::class, target[key] ?: field.defaultFactory()).also{curr = it})
                             } ?: err("invalid VO field")
+//                            is MutableList<*>->
+//                            is MutableMap<*, *>->
                             else->err("invalid stack open")
                         }
                         c++
