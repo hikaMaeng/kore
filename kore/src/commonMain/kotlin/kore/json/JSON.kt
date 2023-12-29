@@ -85,7 +85,7 @@ object JSON{
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }
         it[EnumMapField::class] = {field, v->
-            val enums:Array<*> = (field as EnumListField<*>).enums
+            val enums:Array<*> = (field as EnumMapField<*>).enums
             val index:Int = v.toInt()
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }

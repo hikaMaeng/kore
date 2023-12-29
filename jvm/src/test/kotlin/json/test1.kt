@@ -209,7 +209,6 @@ class test1 {
                 acc + c
             }
             assertEquals(str, """{"a":1,"b":[{"a":2,"b":"abc"},{"a":3,"b":"def"}],"c":{"a":{"a":4,"b":"ghi"},"b":{"a":5,"b":"jkl"}}}""")
-            //val str = """{"a":1,"b":[{"a":2,"b":"abc"},{"a":3,"b":"def"}],"c":{"a":{"a":4,"b":"ghi"},"b":{"a":5,"b":"jkl"}}}"""
             val parsed = JSON.from(Test4(), flow{emit(str)}).last()
             assertEquals(vo.a, parsed.a)
             assertEquals(vo.b[0].a, parsed.b[0].a)
@@ -303,15 +302,13 @@ class test1 {
             val str = JSON.to(vo).fold(""){acc, c->
                 acc + c
             }
-//            assertEquals(str, """{"a":{"e":true,"f":1.2,"a":1,"b":"abc"},"b":[{"e":true,"f":1.2,"a":2,"b":"def"},{"e":false,"f":1.3,"c":3,"d":"ghi"}],"c":{"a":{"e":true,"f":1.4,"a":4,"b":"jkl"},"b":{"e":false,"f":1.5,"c":5,"d":"mno"}}}""")
+            assertEquals(str, """{"a":{"e":true,"f":1.2,"a":1,"b":"abc"},"b":[{"e":true,"f":1.2,"a":2,"b":"def"},{"e":false,"f":1.3,"c":3,"d":"ghi"}],"c":{"a":{"e":true,"f":1.4,"a":4,"b":"jkl"},"b":{"e":false,"f":1.5,"c":5,"d":"mno"}}}""")
             println(str)
             val parsed = JSON.from(Test6(), flow{emit(str)}).last()
-            println("--------------")
             assertEquals(vo.a::class, parsed.a::class)
             assertEquals((vo.a as Test6.Sum.A).a, (parsed.a as Test6.Sum.A).a)
             assertEquals((vo.a as Test6.Sum.A).b, (parsed.a as Test6.Sum.A).b)
             assertEquals(vo.b[0]::class, parsed.b[0]::class)
-            println("aaaa2")
             assertEquals((vo.b[0] as Test6.Sum.A).a, (parsed.b[0] as Test6.Sum.A).a)
             assertEquals((vo.b[0] as Test6.Sum.A).b, (parsed.b[0] as Test6.Sum.A).b)
             assertEquals((vo.b[0] as Test6.Sum.A).e, (parsed.b[0] as Test6.Sum.A).e)
