@@ -51,21 +51,22 @@ internal class Parser<V:VO>(val vo:V){
                         val (type, target, key) = curr
                         when(target){
                             is VO->target.getFields()?.get(key)?.let{field->
-                                println("$key, ${field::class.simpleName}")
-                                stack.add(Stack(field, if(field is VOSumField<*>) hashMapOf<String, Any>() else target[key] ?: field.defaultFactory()).also{curr = it})
+                                stack.add(Stack(
+                                    field,
+                                    when(field){
+                                        is VOSumField<*>->hashMapOf<String, String>()
+                                        else->target[key] ?: field.defaultFactory()
+                                    }
+                                ).also{curr = it})
                             } ?: err("invalid VO field")
                             is MutableList<*>->when(type){
-                                is VOListField<*>-> type.factory().let {vo->
-                                    stack.add(Stack(vo, vo).also {curr = it})
-                                }
-                                is VOSumListField<*>->stack.add(Stack(type, hashMapOf<String, Any>()).also {curr = it})
+                                is VOListField<*>->type.factory().let{vo->stack.add(Stack(vo, vo).also{curr = it})}
+                                is VOSumListField<*>->stack.add(Stack(type, hashMapOf<String, String>()).also{curr = it})
                                 else->err("invalid stack open []")
                             }
                             is MutableMap<*, *>->when(type){
-                                is VOMapField<*>->type.factory().let {vo->
-                                    stack.add(Stack(vo, vo).also {curr = it})
-                                }
-                                is VOSumMapField<*>->stack.add(Stack(type, hashMapOf<String, Any>()).also {curr = it})
+                                is VOMapField<*>->type.factory().let{vo->stack.add(Stack(vo, vo).also {curr = it})}
+                                is VOSumMapField<*>->stack.add(Stack(type, hashMapOf<String, String>()).also {curr = it})
                                 else->err("invalid stack open {}")
                             }
                             else->err("invalid stack open")
@@ -86,10 +87,12 @@ internal class Parser<V:VO>(val vo:V){
                                      return s.substring(c)
                                  }
                              } ?: err("invalid VO field")
-
+                        }
+                        is MutableMap<*, *>->(target as MutableMap<String, Any>)[key] = when(type){
+                            is VOSumField<*>, is VOSumListField<*>, is VOSumMapField<*>->flushed
+                            else->JSON.parseValue(type::class, type, flushed)
                         }
                         is MutableList<*>->(target as? MutableList<Any>)?.add(JSON.parseValue(type::class, type, flushed))
-                        is MutableMap<*, *>->(target as? MutableMap<String, Any>)?.put(key, JSON.parseValue(type::class, type, flushed))
                         else->err("invalid value")
                     }
                     skipSpace(108)
@@ -107,44 +110,29 @@ internal class Parser<V:VO>(val vo:V){
                         curr = stack.last()
                         val (type, target, key) = curr
                         when(target){
-                            is VO->target[key] = prev.target
-                            is MutableList<*>->when(type){
-                                is VOSumListField<*>->{
-                                    val map:Map<String, Any> = prev.target as Map<String, Any>
-                                    val mapKeys:Set<String> = map.keys
-                                    type.sum.factories.any{
-                                        val vo:VO = it()
-                                        val keys:MutableSet<String> = vo.values.keys
-                                        if(keys == mapKeys){
-                                            keys.forEach {key-> vo[key] = map[key]!!}
-                                            (target as? MutableList<Any>)?.add(vo)
-                                            true
-                                        }else false
-                                    }
+                            is VO->{
+                                target[key] = when(prev.type){
+                                    is VOSumField<*>->mapToSum(prev.target, prev.type.sum.factories) ?: err("invalid sum")
+                                    else->prev.target
                                 }
+                            }
+                            is MutableList<*>->when(type){
+                                is VOSumListField<*>->(target as MutableList<Any>).add(mapToSum(prev.target, type.sum.factories) ?: err("invalid sum"))
                                 else->(target as? MutableList<Any>)?.add(prev.target)
                             }
-                            is MutableMap<*, *>->when(type){
-                                is VOSumMapField<*>->{
-                                    val map:Map<String, Any> = prev.target as Map<String, Any>
-                                    val mapKeys:Set<String> = map.keys
-                                    type.sum.factories.any{
-                                        val vo:VO = it()
-                                        val keys:MutableSet<String> = vo.values.keys
-                                        if(keys == mapKeys){
-                                            keys.forEach {key-> vo[key] = map[key]!!}
-                                            (target as? MutableMap<String, Any>)?.put(key, vo)
-                                            true
-                                        }else false
-                                    }
-                                }
-                                else->(target as? MutableMap<String, Any>)?.put(key, prev.target)
+                            is MutableMap<*, *>->(target as MutableMap<String, Any>)[key] = when(type){
+                                is VOSumMapField<*>->mapToSum(prev.target, type.sum.factories) ?: err("invalid sum")
+                                else->prev.target
                             }
                             else->err("invalid value")
                         }
-                        skipSpace(108)
+                        if(target == vo){
+                            state = 109
+                            return s.substring(c)
+                        }else skipSpace(108)
                     }
                 }
+                109->skipSpace(108)
                 1000->{/** terminal */}
             }
         }
@@ -195,5 +183,22 @@ internal class Parser<V:VO>(val vo:V){
                 break
             }
         }while(c < s.length)
+    }
+    private inline fun mapToSum(map:Any, factories:Array<out ()->VO>):Any?{
+        map as Map<String, String>
+        val mapKeys:Set<String> = map.keys
+        factories.any{
+            val vo:VO = it()
+            val keys:MutableSet<String> = vo.values.keys
+            if(keys == mapKeys){
+                val fields:Map<String, Field<*>> = vo.getFields()!!
+                keys.forEach {key->
+                    val t = fields[key]!!
+                    vo[key] = JSON.parseValue(t::class, t, map[key]!!)
+                }
+                return vo
+            }else false
+        }
+        return null
     }
 }
