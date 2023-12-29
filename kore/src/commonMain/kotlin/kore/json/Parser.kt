@@ -111,14 +111,35 @@ internal class Parser<V:VO>(val vo:V){
                             is MutableList<*>->when(type){
                                 is VOSumListField<*>->{
                                     val map:Map<String, Any> = prev.target as Map<String, Any>
+                                    val mapKeys:Set<String> = map.keys
                                     type.sum.factories.any{
-                                        
+                                        val vo:VO = it()
+                                        val keys:MutableSet<String> = vo.values.keys
+                                        if(keys == mapKeys){
+                                            keys.forEach {key-> vo[key] = map[key]!!}
+                                            (target as? MutableList<Any>)?.add(vo)
+                                            true
+                                        }else false
                                     }
-                                    (target as? MutableList<Any>)?.add(prev.target)
                                 }
                                 else->(target as? MutableList<Any>)?.add(prev.target)
                             }
-                            is MutableMap<*, *>->(target as? MutableMap<String, Any>)?.put(key, prev.target)
+                            is MutableMap<*, *>->when(type){
+                                is VOSumMapField<*>->{
+                                    val map:Map<String, Any> = prev.target as Map<String, Any>
+                                    val mapKeys:Set<String> = map.keys
+                                    type.sum.factories.any{
+                                        val vo:VO = it()
+                                        val keys:MutableSet<String> = vo.values.keys
+                                        if(keys == mapKeys){
+                                            keys.forEach {key-> vo[key] = map[key]!!}
+                                            (target as? MutableMap<String, Any>)?.put(key, vo)
+                                            true
+                                        }else false
+                                    }
+                                }
+                                else->(target as? MutableMap<String, Any>)?.put(key, prev.target)
+                            }
                             else->err("invalid value")
                         }
                         skipSpace(108)
