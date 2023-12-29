@@ -3,8 +3,7 @@
 package kore.json
 
 import kore.vo.VO
-import kore.vo.field.VOListField
-import kore.vo.field.VOMapField
+import kore.vo.field.*
 
 internal class Parser<V:VO>(val vo:V){
     private data class Stack(val type:Any, val target:Any, var key:String = "")
@@ -51,18 +50,23 @@ internal class Parser<V:VO>(val vo:V){
                     '[','{'->{
                         val (type, target, key) = curr
                         when(target){
-                            is VO-> target.getFields()?.get(key)?.let{field->
-                                stack.add(Stack(field, target[key] ?: field.defaultFactory()).also{curr = it})
+                            is VO->target.getFields()?.get(key)?.let{field->
+                                println("$key, ${field::class.simpleName}")
+                                stack.add(Stack(field, if(field is VOSumField<*>) hashMapOf<String, Any>() else target[key] ?: field.defaultFactory()).also{curr = it})
                             } ?: err("invalid VO field")
-                            is MutableList<*>->{
-                                (type as VOListField<*>).factory().let {vo->
+                            is MutableList<*>->when(type){
+                                is VOListField<*>-> type.factory().let {vo->
                                     stack.add(Stack(vo, vo).also {curr = it})
                                 }
+                                is VOSumListField<*>->stack.add(Stack(type, hashMapOf<String, Any>()).also {curr = it})
+                                else->err("invalid stack open []")
                             }
-                            is MutableMap<*, *>->{
-                                (type as VOMapField<*>).factory().let {vo->
+                            is MutableMap<*, *>->when(type){
+                                is VOMapField<*>->type.factory().let {vo->
                                     stack.add(Stack(vo, vo).also {curr = it})
                                 }
+                                is VOSumMapField<*>->stack.add(Stack(type, hashMapOf<String, Any>()).also {curr = it})
+                                else->err("invalid stack open {}")
                             }
                             else->err("invalid stack open")
                         }
@@ -101,10 +105,19 @@ internal class Parser<V:VO>(val vo:V){
                         val prev:Stack = curr
                         stack.removeLast()
                         curr = stack.last()
-                        val (_, target, key) = curr
+                        val (type, target, key) = curr
                         when(target){
                             is VO->target[key] = prev.target
-                            is MutableList<*>->(target as? MutableList<Any>)?.add(prev.target)
+                            is MutableList<*>->when(type){
+                                is VOSumListField<*>->{
+                                    val map:Map<String, Any> = prev.target as Map<String, Any>
+                                    type.sum.factories.any{
+                                        
+                                    }
+                                    (target as? MutableList<Any>)?.add(prev.target)
+                                }
+                                else->(target as? MutableList<Any>)?.add(prev.target)
+                            }
                             is MutableMap<*, *>->(target as? MutableMap<String, Any>)?.put(key, prev.target)
                             else->err("invalid value")
                         }

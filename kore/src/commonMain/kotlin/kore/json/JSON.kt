@@ -117,6 +117,8 @@ object JSON{
             }while(++i < size)
             emit("}")
         }
+        target[VOSumField::class] = target[VOField::class]!!
+
         val value:suspend FlowCollector<String>.(v:Any)->Unit = {emit("$it")}
         target[IntField::class] = value
         target[IntField::class] = value
@@ -142,6 +144,7 @@ object JSON{
             emit("]")
         }
         target[VOListField::class] = getList{stringify(VOField::class, it)}
+        target[VOSumListField::class] = target[VOListField::class]!!
         target[EnumListField::class] = getList{stringify(EnumField::class, it)}
         val list:suspend FlowCollector<String>.(v: Any)->Unit = getList{stringify(it::class, it)}
         target[IntListField::class] = list
@@ -169,6 +172,7 @@ object JSON{
             emit("}")
         }
         target[VOMapField::class] = getMap{stringify(VOField::class, it)}
+        target[VOSumMapField::class] = target[VOMapField::class]!!
         target[EnumMapField::class] = getMap{stringify(EnumField::class, it)}
         val map:suspend FlowCollector<String>.(v:Any)->Unit = getMap{stringify(it::class, it)}
         target[StringMapField::class] = map

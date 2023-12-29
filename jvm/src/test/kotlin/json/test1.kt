@@ -2,6 +2,7 @@ package json
 
 import kore.json.JSON
 import kore.vo.VO
+import kore.vo.VOSum
 import kore.vo.field.*
 import kore.vo.field.list.*
 import kore.vo.field.map.*
@@ -246,6 +247,88 @@ class test1 {
             assertEquals(vo.c["a"], parsed.c["a"])
             assertEquals(vo.c["b"], parsed.c["b"])
 
+        }
+    }
+    class Test6:VO(){
+        sealed class Sum:VO(){
+            companion object:VOSum<Sum>(::A, ::B)
+            class A:Sum(){
+                var a by int
+                var b by string
+            }
+            class B:Sum(){
+                var c by int
+                var d by string
+            }
+            var e by boolean
+            var f by double
+        }
+        var a by sum(Sum)
+        var b by sumList(Sum)
+        var c by sumMap(Sum)
+    }
+    @Test
+    fun test6(){
+        runBlocking {
+            val vo = Test6().also {
+                it.a = Test6.Sum.A().also {
+                    it.a = 1
+                    it.b = "abc"
+                    it.e = true
+                    it.f = 1.2
+                }
+                it.b = arrayListOf(Test6.Sum.A().also {
+                    it.a = 2
+                    it.b = "def"
+                    it.e = true
+                    it.f = 1.2
+                }, Test6.Sum.B().also {
+                    it.c = 3
+                    it.d = "ghi"
+                    it.e = false
+                    it.f = 1.3
+                })
+                it.c = hashMapOf("a" to Test6.Sum.A().also {
+                    it.a = 4
+                    it.b = "jkl"
+                    it.e = true
+                    it.f = 1.4
+                }, "b" to Test6.Sum.B().also {
+                    it.c = 5
+                    it.d = "mno"
+                    it.e = false
+                    it.f = 1.5
+                })
+            }
+            val str = JSON.to(vo).fold(""){acc, c->
+                acc + c
+            }
+            assertEquals(str, """{"a":{"e":true,"f":1.2,"a":1,"b":"abc"},"b":[{"e":true,"f":1.2,"a":2,"b":"def"},{"e":false,"f":1.3,"c":3,"d":"ghi"}],"c":{"a":{"e":true,"f":1.4,"a":4,"b":"jkl"},"b":{"e":false,"f":1.5,"c":5,"d":"mno"}}}""")
+            val parsed = JSON.from(Test6(), flow{emit(str)}).last()
+            assertEquals(vo.a::class, parsed.a::class)
+            assertEquals((vo.a as Test6.Sum.A).a, (parsed.a as Test6.Sum.A).a)
+            assertEquals((vo.a as Test6.Sum.A).b, (parsed.a as Test6.Sum.A).b)
+            assertEquals(vo.b[0]::class, parsed.b[0]::class)
+            println("aaaa2")
+            assertEquals((vo.b[0] as Test6.Sum.A).a, (parsed.b[0] as Test6.Sum.A).a)
+            assertEquals((vo.b[0] as Test6.Sum.A).b, (parsed.b[0] as Test6.Sum.A).b)
+            assertEquals((vo.b[0] as Test6.Sum.A).e, (parsed.b[0] as Test6.Sum.A).e)
+            assertEquals((vo.b[0] as Test6.Sum.A).f, (parsed.b[0] as Test6.Sum.A).f)
+            assertEquals(vo.b[1]::class, parsed.b[1]::class)
+            assertEquals((vo.b[1] as Test6.Sum.B).c, (parsed.b[1] as Test6.Sum.B).c)
+            assertEquals((vo.b[1] as Test6.Sum.B).d, (parsed.b[1] as Test6.Sum.B).d)
+            assertEquals((vo.b[1] as Test6.Sum.B).e, (parsed.b[1] as Test6.Sum.B).e)
+            assertEquals((vo.b[1] as Test6.Sum.B).f, (parsed.b[1] as Test6.Sum.B).f)
+            assertEquals(vo.c["a"]!!::class, parsed.c["a"]!!::class)
+            assertEquals((vo.c["a"]!! as Test6.Sum.A).a, (parsed.c["a"]!! as Test6.Sum.A).a)
+            assertEquals((vo.c["a"]!! as Test6.Sum.A).b, (parsed.c["a"]!! as Test6.Sum.A).b)
+            assertEquals((vo.c["a"]!! as Test6.Sum.A).e, (parsed.c["a"]!! as Test6.Sum.A).e)
+            assertEquals((vo.c["a"]!! as Test6.Sum.A).f, (parsed.c["a"]!! as Test6.Sum.A).f)
+            assertEquals(vo.c["b"]!!::class, parsed.c["b"]!!::class)
+            assertEquals((vo.c["b"]!! as Test6.Sum.B).c, (parsed.c["b"]!! as Test6.Sum.B).c)
+            assertEquals((vo.c["b"]!! as Test6.Sum.B).d, (parsed.c["b"]!! as Test6.Sum.B).d)
+            assertEquals((vo.c["b"]!! as Test6.Sum.B).e, (parsed.c["b"]!! as Test6.Sum.B).e)
+            assertEquals((vo.c["b"]!! as Test6.Sum.B).f, (parsed.c["b"]!! as Test6.Sum.B).f)
         }
     }
 }
