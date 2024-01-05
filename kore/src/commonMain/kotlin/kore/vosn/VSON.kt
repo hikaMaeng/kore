@@ -90,6 +90,20 @@ object VSON{
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }
     }
+    private val encodeStringRex:Regex = Regex("[@|~\n\r!]")
+    private val encodeStringMap:Map<String, String> = hashMapOf(
+        "\\" to "\\\\", "@" to "\\@", "|" to "\\|", "~" to "\\~", "!" to "\\!", "\n" to "\\n", "\r" to "\\r"
+    )
+    private val decodeStringRex:Regex = Regex("\\\\[@|~\n\r!]")
+    private val decodeStringMap:Map<String, String> = hashMapOf(
+        "\\\\" to "\\", "\\@" to "@", "\\|" to "|", "\\~" to "~", "\\!" to "!", "\\n" to "\n", "\\r" to "\r"
+    )
+    const val FIELD_SEP:String = "|"
+    const val FIELD_SEP_C:Char = '|'
+    const val OPTIONAL_NULL:String = "~"
+    const val OPTIONAL_NULL_C:Char = '~'
+    const val STRINGLIST_EMPTY:String = "!"
+    const val STRINGLIST_EMPTY_C:Char = '!'
     private val stringifier:HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit>(50).also{target->
         target[VOField::class] = {
             val vo:VO = it as VO
@@ -106,14 +120,18 @@ object VSON{
                     if(include == null || include(key, v)){
                         val field:Field<*> = fields[key] ?: ToVONoInitialized(vo, "key:$key, v:$v").terminate()
                         val converter:suspend FlowCollector<String>.(Any)->Unit = target[field::class] ?: ToNoConverter(vo, "field:${field::class.simpleName}, key:$key, v:$v").terminate()
-                        if(i != 0) emit("|")
+                        if(i != 0) emit(FIELD_SEP)
                         converter(v)
                     }
                 }else{
                     if(include?.let{f->f == Task.EXCLUDE || f == Task.OPTIONAL || f(key, v)} != false) ToNullField(vo, "key:$key, v:$v").terminate()
+                    else{
+                        // 이 경우 옵셔널일 때만 ~를 마크함
+                        if(include == Task.OPTIONAL) emit(OPTIONAL_NULL)
+                    }
+
                 }
             }while(++i < size)
-            emit("@")
         }
         target[VOSumField::class] = target[VOField::class]!!
         val value:suspend FlowCollector<String>.(v:Any)->Unit = {emit("$it")}
@@ -127,7 +145,9 @@ object VSON{
         target[FloatField::class] = value
         target[DoubleField::class] = value
         target[BooleanField::class] = value
-        target[StringField::class] = value
+        target[StringField::class] = {
+            emit("$it".replace(encodeStringRex){encodeStringMap[it.value]!!})
+        }
         target[EnumField::class] = {emit("${(it as Enum<*>).ordinal}")}
         fun getList(block:suspend FlowCollector<String>.(Any)->Unit):suspend FlowCollector<String>.(v: Any)->Unit = {
             it as List<Any>
