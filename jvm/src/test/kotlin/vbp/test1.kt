@@ -1,11 +1,13 @@
-package vson
+package vbp
 
 import kore.bytes.Bytes
 import kore.vo.VO
 import kore.vo.field.value.*
+import kore.vbp.VBP
 import kore.vosn.VSON
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.runBlocking
+import kotlinx.io.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -37,10 +39,24 @@ class test1 {
                 it.i = 3u
                 it.j = "abc"
             }
-            val str = VSON.to(vo).fold(""){acc, c->
+            val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
                 acc + c
             }
-            assertEquals(str, "1|123|121444|1.2|1.3|true|1|2|3|abc")
+            println("---${arr.joinToString { "$it" }}---")
+            val buffer = Buffer().also {
+                it.writeInt(1)
+                it.writeShort(123)
+                it.writeLong(121444)
+                it.writeFloat(1.2f)
+                it.writeDouble(1.3)
+                it.writeByte(1)
+                it.writeUInt(1u)
+                it.writeUShort(2u)
+                it.writeULong(3u)
+                it.writeString("abc")
+                it.writeByte(0)
+            }.readByteArray()
+            assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
         }
     }
     class Test2:VO(){

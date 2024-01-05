@@ -1,6 +1,6 @@
 @file:Suppress("NOTHING_TO_INLINE", "FunctionName", "UNCHECKED_CAST")
 
-package kore.vosn
+package kore.vbp
 
 import kore.vo.VO
 import kore.vo.converter.ToNoConverter
@@ -15,21 +15,35 @@ import kore.vo.task.Task
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
+import kotlinx.io.*
 import kotlin.reflect.KClass
 
-object VSON{
-    private val parsers:HashMap<Any, (Any, String)->Any> = HashMap<Any, (Any, String)->Any>(100).also{
-        val cInt:(Any, String)->Any = {_, v->v.toInt()}
-        val cShort:(Any, String)->Any = {_, v->v.toShort()}
-        val cLong:(Any, String)->Any = {_, v->v.toLong()}
-        val cFloat:(Any, String)->Any = {_, v->v.toFloat()}
-        val cDouble:(Any, String)->Any = {_, v->v.toDouble()}
-        val cBoolean:(Any, String)->Any = {_, v->v.toBoolean()}
-        val cUInt:(Any, String)->Any = {_, v->v.toUInt()}
-        val cUShort:(Any, String)->Any = {_, v->v.toUShort()}
-        val cULong:(Any, String)->Any = {_, v->v.toULong()}
-        val cString:(Any, String)->Any = {_, v->v}
-
+object VBP{
+    private inline fun writeBytes(block:Buffer.()->Unit):ByteArray{
+        val buffer:Buffer = Buffer()
+        buffer.block()
+        val byteArray:ByteArray = buffer.readByteArray()
+        buffer.close()
+        return byteArray
+    }
+    private inline fun readBytes(arr:ByteArray, block:Buffer.()->Any):Any{
+        val buffer:Buffer = Buffer()
+        buffer.write(arr)
+        val v:Any = buffer.block()
+        buffer.close()
+        return v
+    }
+    private val parsers:HashMap<Any, (Any, ByteArray)->Any> = HashMap<Any, (Any, ByteArray)->Any>(100).also{
+        val cInt:(Any, ByteArray)->Any = {_, v->readBytes(v){readInt()}}
+        val cShort:(Any, ByteArray)->Any = {_, v->readBytes(v){readShort()}}
+        val cLong:(Any, ByteArray)->Any = {_, v->readBytes(v){readLong()}}
+        val cFloat:(Any, ByteArray)->Any = {_, v->readBytes(v){readFloat()}}
+        val cDouble:(Any, ByteArray)->Any = {_, v->readBytes(v){readDouble()}}
+        val cBoolean:(Any, ByteArray)->Any = {_, v->readBytes(v){readByte().toInt() == 1}}
+        val cUInt:(Any, ByteArray)->Any = {_, v->readBytes(v){readUInt()}}
+        val cUShort:(Any, ByteArray)->Any = {_, v->readBytes(v){readUShort()}}
+        val cULong:(Any, ByteArray)->Any = {_, v->readBytes(v){readULong()}}
+        val cString:(Any, ByteArray)->Any = {_, v->readBytes(v){readString()}}
         it[Int::class] = cInt
         it[Short::class] = cShort
         it[Long::class] = cLong
@@ -90,25 +104,9 @@ object VSON{
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }
     }
-    private val encodeStringRex:Regex = Regex("[@|~\n\r!]")
-    private val encodeStringMap:Map<String, String> = hashMapOf(
-        "\\" to "\\\\", "@" to "\\@", "|" to "\\|", "~" to "\\~", "!" to "\\!", "\n" to "\\n", "\r" to "\\r"
-    )
-    private val decodeStringRex:Regex = Regex("\\\\[@|~\n\r!]")
-    private val decodeStringMap:Map<String, String> = hashMapOf(
-        "\\\\" to "\\", "\\@" to "@", "\\|" to "|", "\\~" to "~", "\\!" to "!", "\\n" to "\n", "\\r" to "\r"
-    )
-    internal inline fun encodeString(v:Any?):String = "$v".replace(encodeStringRex){ encodeStringMap[it.value]!!}
-    internal inline fun decodeString(v:String):String = v.replace(decodeStringRex){ decodeStringMap[it.value]!!}
-    const val FIELD_SEP:String = "|"
-    const val FIELD_SEP_C:Char = '|'
-    const val OPTIONAL_NULL:String = "~"
-    const val OPTIONAL_NULL_C:Char = '~'
-    const val STRINGLIST_EMPTY:String = "!"
-    const val STRINGLIST_EMPTY_C:Char = '!'
-    const val TERMINAL:String = "@"
-    const val TERMINAL_C:Char = '@'
-    private val stringifier:HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<String>.(Any)->Unit>(50).also{target->
+    private val OPTIONAL_NULL:ByteArray = byteArrayOf(1.toByte())
+
+    private val binarifier:HashMap<KClass<*>, suspend FlowCollector<ByteArray>.(Any)->Unit> = HashMap<KClass<*>, suspend FlowCollector<ByteArray>.(Any)->Unit>(50).also{target->
         target[VOField::class] = {
             val vo:VO = it as VO
             val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "no fields").terminate()
@@ -124,8 +122,7 @@ object VSON{
                 if(v != null){
                     if(include == null || include(key, v)){
                         val field:Field<*> = fields[key] ?: ToVONoInitialized(vo, "key:$key, v:$v").terminate()
-                        val converter:suspend FlowCollector<String>.(Any)->Unit = target[field::class] ?: ToNoConverter(vo, "field:${field::class.simpleName}, key:$key, v:$v").terminate()
-                        if(i != 0) emit(FIELD_SEP)
+                        val converter:suspend FlowCollector<ByteArray>.(Any)->Unit = target[field::class] ?: ToNoConverter(vo, "field:${field::class.simpleName}, key:$key, v:$v").terminate()
                         converter(v)
                     }
                 }else{
@@ -133,7 +130,6 @@ object VSON{
                     else{
                         // 이 경우 옵셔널일 때만 ~를 마크함
                         if(include == Task.OPTIONAL){
-                            if(i != 0) emit(FIELD_SEP)
                             println("optional key:$key, v:$v")
                             emit(OPTIONAL_NULL)
                         }
@@ -143,35 +139,35 @@ object VSON{
             }while(++i < size)
         }
         target[VOSumField::class] = target[VOField::class]!!
-        val value:suspend FlowCollector<String>.(v:Any)->Unit = {emit("$it")}
-        target[IntField::class] = value
-        target[IntField::class] = value
-        target[ShortField::class] = value
-        target[LongField::class] = value
-        target[UIntField::class] = value
-        target[UShortField::class] = value
-        target[ULongField::class] = value
-        target[FloatField::class] = value
-        target[DoubleField::class] = value
-        target[BooleanField::class] = value
         target[StringField::class] = {
-            emit(encodeString(it))
+            emit(writeBytes{
+                writeString("$it")
+                writeByte(0)
+            })
         }
-        target[EnumField::class] = {emit("${(it as Enum<*>).ordinal}")}
-        fun getList(block:suspend FlowCollector<String>.(Any)->Unit):suspend FlowCollector<String>.(v: Any)->Unit = {
+        target[IntField::class] = {emit(writeBytes{writeInt(it as Int)})}
+        target[ShortField::class] = {emit(writeBytes{writeShort(it as Short)})}
+        target[LongField::class] = {emit(writeBytes{writeLong(it as Long)})}
+        target[UIntField::class] = {emit(writeBytes{writeUInt(it as UInt)})}
+        target[UShortField::class] = {emit(writeBytes{writeUShort(it as UShort)})}
+        target[ULongField::class] = {emit(writeBytes{writeULong(it as ULong)})}
+        target[FloatField::class] = {emit(writeBytes{writeFloat(it as Float)})}
+        target[DoubleField::class] = {emit(writeBytes{writeDouble(it as Double)})}
+        target[BooleanField::class] = {emit(writeBytes{writeByte(if(it == true) 1 else 0)})}
+        target[EnumField::class] = {emit(writeBytes{writeShort((it as Enum<*>).ordinal.toShort())})}
+        fun getList(block:suspend FlowCollector<ByteArray>.(Any)->Unit):suspend FlowCollector<ByteArray>.(v: Any)->Unit = {
             it as List<Any>
             val size:Int = it.size
             var i:Int = 0
+            emit(writeBytes{writeInt(it as Int)})
             do{
-                if(i != 0) emit(FIELD_SEP)
                 block(it[i++])
             }while(i < size)
-            emit(TERMINAL)
         }
-        target[VOListField::class] = getList{stringify(VOField::class, it)}
+        target[VOListField::class] = getList{binarify(VOField::class, it)}
         target[VOSumListField::class] = target[VOListField::class]!!
-        target[EnumListField::class] = getList{stringify(EnumField::class, it)}
-        val list:suspend FlowCollector<String>.(v: Any)->Unit = getList{stringify(it::class, it)}
+        target[EnumListField::class] = getList{binarify(EnumField::class, it)}
+        val list:suspend FlowCollector<ByteArray>.(v: Any)->Unit = getList{binarify(it::class, it)}
         target[IntListField::class] = list
         target[ShortListField::class] = list
         target[LongListField::class] = list
@@ -182,23 +178,25 @@ object VSON{
         target[DoubleListField::class] = list
         target[BooleanListField::class] = list
         target[StringListField::class] = list
-        fun getMap(block:suspend FlowCollector<String>.(Any)->Unit):suspend FlowCollector<String>.(v: Any)->Unit = {
+        fun getMap(block:suspend FlowCollector<ByteArray>.(Any)->Unit):suspend FlowCollector<ByteArray>.(v: Any)->Unit = {
             it as Map<String, Any>
             val keys:Array<String> = it.keys.toTypedArray()
             val size:Int = keys.size
             var i:Int = 0
+            emit(writeBytes{writeInt(it as Int)})
             do{
-                if(i != 0) emit(FIELD_SEP)
                 val key:String = keys[i++]
-                emit(key.replace(encodeStringRex){encodeStringMap[it.value]!!} + FIELD_SEP)
+                emit(writeBytes{
+                    writeString(key)
+                    writeByte(0)
+                })
                 block(it[key]!!)
             }while(i < size)
-            emit(TERMINAL)
         }
-        target[VOMapField::class] = getMap{stringify(VOField::class, it)}
+        target[VOMapField::class] = getMap{binarify(VOField::class, it)}
         target[VOSumMapField::class] = target[VOMapField::class]!!
-        target[EnumMapField::class] = getMap{stringify(EnumField::class, it)}
-        val map:suspend FlowCollector<String>.(v:Any)->Unit = getMap{stringify(it::class, it)}
+        target[EnumMapField::class] = getMap{binarify(EnumField::class, it)}
+        val map:suspend FlowCollector<ByteArray>.(v:Any)->Unit = getMap{binarify(it::class, it)}
         target[StringMapField::class] = map
         target[IntMapField::class] = map
         target[ShortMapField::class] = map
@@ -210,24 +208,25 @@ object VSON{
         target[DoubleMapField::class] = map
         target[BooleanListField::class] = map
     }
-    internal fun parseValue(type:Any, field:Any, v:String):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(field, v)
-    private suspend inline fun FlowCollector<String>.stringify(type:KClass<*>, v:Any){
-        (stringifier[type] ?: throw Throwable("invalid stringify type $type"))(v)
+    internal fun parseValue(type:Any, field:Any, v:ByteArray):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(field, v)
+    private suspend inline fun FlowCollector<ByteArray>.binarify(type:KClass<*>, v:Any){
+        (binarifier[type] ?: throw Throwable("invalid stringify type $type"))(v)
     }
-    fun setParser(type:Any, parser:(Any, String)->Any){parsers[type] = parser}
-    fun setStringifier(type:KClass<*>, stringifier:suspend FlowCollector<String>.(Any)->Unit){
-        this.stringifier[type] = stringifier}
-    fun <V:VO> from(vo:V, value:Flow<String>):Flow<V> = flow{
+    fun setParser(type:Any, parser:(Any, ByteArray)->Any){
+        parsers[type] = parser}
+    fun setBinarifier(type:KClass<*>, binary:suspend FlowCollector<ByteArray>.(Any)->Unit){
+        binarifier[type] = binary
+    }
+    fun <V:VO> from(vo:V, value:Flow<ByteArray>):Flow<V> = flow{
         val emitter:FlowCollector<V> = this
         val parser:Parser<V> = Parser(vo)
         value.collect {
-            var str:String? = it
-            while(str != null) str = parser(str)?.let{(s, vo)->
+            var arr:ByteArray? = it
+            while(arr != null) arr = parser(arr)?.let{(s, vo)->
                 emitter.emit(vo)
                 s
             }
         }
     }
-    fun to(vo:VO):Flow<String> = flow{stringify(VOField::class, vo)}
-
+    fun to(vo:VO):Flow<ByteArray> = flow{binarify(VOField::class, vo)}
 }
