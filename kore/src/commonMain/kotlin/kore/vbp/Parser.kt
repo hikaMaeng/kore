@@ -3,12 +3,15 @@
 package kore.vbp
 
 import kore.vo.VO
+import kore.vo.converter.ToVONoInitialized
 import kore.vo.field.*
+import kore.vo.task.Task
 import kore.vosn.VSON
 
 internal class Parser<V:VO>(val vo:V){
-    private data class Stack(val type:Any, val target:Any, var key:String = "")
+    private data class Stack(val type:Any, val target:Any, var key:String = "", var index:Int = 0)
     private var curr:Stack = Stack(vo, vo)
+    private var currArray:ByteArray = byteArrayOf()
     private val stack:ArrayList<Stack> = arrayListOf(curr)
 
     private var state:Int = 100
@@ -34,15 +37,18 @@ internal class Parser<V:VO>(val vo:V){
                 30->wordRead("true")
                 40->wordRead("false")
                 50->wordRead("null")
-                100->skipSpace(101) /** start point */
-                101->if(s[c++] == '{') skipSpace(102) else err("invalid object")
-                102->stringRead(103) /** key */
-                103->{
-                    curr.key = flushed
-                    skipSpace(104)
+                100-> {
+                    val vo:VO = curr.target as VO
+                    val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "no fields").terminate()
+                    val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "no keys").terminate()
+                    val tasks:HashMap<String, Task>? = vo.getTasks()
+                    val key= keys[curr.index]
+                    val field:Field<*>? = fields[key]
+
                 }
-                104->if(s[c++] == ':') skipSpace(105) else err("invalid colon next key, ${curr.key}--")
-                105->when(s[c]){ /** value or push stack */
+
+
+                    when(s[c]){ /** value or push stack */
                     '"'-> stringRead(106)
                     '0','1','2','3','4','5','6','7','8','9','-','.'->numRead(106)
                     't'->trueRead(106)

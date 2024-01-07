@@ -90,17 +90,17 @@ object VBP{
 
         it[EnumField::class] = {field, v->
             val enums:Array<*> = (field as EnumField<*>).enums
-            val index:Int = v.toInt()
+            val index:Int = readBytes(v){readInt()} as Int
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }
         it[EnumListField::class] = {field, v->
             val enums:Array<*> = (field as EnumListField<*>).enums
-            val index:Int = v.toInt()
+            val index:Int = readBytes(v){readInt()} as Int
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }
         it[EnumMapField::class] = {field, v->
             val enums:Array<*> = (field as EnumMapField<*>).enums
-            val index:Int = v.toInt()
+            val index:Int = readBytes(v){readInt()} as Int
             if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
         }
     }
