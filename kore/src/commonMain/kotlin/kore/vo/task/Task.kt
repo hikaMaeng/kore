@@ -35,7 +35,7 @@ abstract class Task{
         _getTasks?.fold(v as Any?){acc, next->acc?.let{next(vo, key, it)}}
     inline fun setFold(vo:VO, key:String, v:Any):Any? = _setTasks?.fold(v as Any?){acc, next->
         acc?.let{next(vo, key, it)}
-    }
+    } ?: v
     fun exclude(){include = EXCLUDE}
     fun optinal(){include = OPTIONAL}
     fun isInclude(block:(String, Any?)->Boolean){include = block}

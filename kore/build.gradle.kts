@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
-
 plugins {
     kotlin("multiplatform")
 }
@@ -31,6 +29,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC")
+                api("org.jetbrains.kotlinx:kotlinx-io-core:0.3.0")
+                api("org.jetbrains.kotlinx:kotlinx-io-bytestring:0.3.0")
             }
         }
         val jvmMain by getting
