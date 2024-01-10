@@ -3,12 +3,12 @@
 package kore.vo.field.list
 
 import kore.vo.VO
-import kore.vo.field.Field
+import kore.vo.field.ListFields
 import kore.vo.field.Prop
 import kore.vo.field.list.StringListField.T
 import kore.vo.task.Task
 
-object StringListField:Field<MutableList<String>>{
+object StringListField:ListFields<String> {
     override fun defaultFactory():MutableList<String> = arrayListOf()
     class T:Task(){
         fun default(v:MutableList<String>){

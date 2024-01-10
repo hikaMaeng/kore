@@ -4,7 +4,6 @@ package kore.vbp
 
 import kore.vo.VO
 import kore.vo.converter.ToNoConverter
-import kore.vo.converter.ToNoEnum
 import kore.vo.converter.ToNullField
 import kore.vo.converter.ToVONoInitialized
 import kore.vo.field.*
@@ -33,17 +32,38 @@ object VBP{
         buffer.close()
         return v
     }
-    private val parsers:HashMap<Any, (Any, ByteArray)->Any> = HashMap<Any, (Any, ByteArray)->Any>(100).also{
-        val cInt:(Any, ByteArray)->Any = {_, v->readBytes(v){readInt()}}
-        val cShort:(Any, ByteArray)->Any = {_, v->readBytes(v){readShort()}}
-        val cLong:(Any, ByteArray)->Any = {_, v->readBytes(v){readLong()}}
-        val cFloat:(Any, ByteArray)->Any = {_, v->readBytes(v){readFloat()}}
-        val cDouble:(Any, ByteArray)->Any = {_, v->readBytes(v){readDouble()}}
-        val cBoolean:(Any, ByteArray)->Any = {_, v->readBytes(v){readByte().toInt() == 1}}
-        val cUInt:(Any, ByteArray)->Any = {_, v->readBytes(v){readUInt()}}
-        val cUShort:(Any, ByteArray)->Any = {_, v->readBytes(v){readUShort()}}
-        val cULong:(Any, ByteArray)->Any = {_, v->readBytes(v){readULong()}}
-        val cString:(Any, ByteArray)->Any = {_, v->readBytes(v){readString()}}
+    private val parsers:HashMap<Any, (Any, ByteArray)->Pair<Any, ByteArray>?> = HashMap<Any, (Any, ByteArray)->Pair<Any, ByteArray>?>(100).also{
+        val cInt:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 4) null else readBytes(v){readInt()} to v.copyOfRange(4, v.size)
+        }
+        val cShort:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 2) null else readBytes(v){readShort()} to v.copyOfRange(2, v.size)
+        }
+        val cLong:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 8) null else readBytes(v){readLong()} to v.copyOfRange(8, v.size)
+        }
+        val cFloat:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 4) null else readBytes(v){readFloat()} to v.copyOfRange(4, v.size)
+        }
+        val cDouble:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 8) null else readBytes(v){readDouble()} to v.copyOfRange(8, v.size)
+        }
+        val cBoolean:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            readBytes(v){readByte().toInt() == 1} to v.copyOfRange(1, v.size)
+        }
+        val cUInt:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 4) null else readBytes(v){readUInt()} to v.copyOfRange(4, v.size)
+        }
+        val cUShort:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 2) null else readBytes(v){readUShort()} to v.copyOfRange(2, v.size)
+        }
+        val cULong:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            if(v.size < 8) null else readBytes(v){readULong()} to v.copyOfRange(8, v.size)
+        }
+        val cString:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+            val index:Int = v.indexOf(0.toByte())
+            if(index == -1) null else readBytes(v.copyOfRange(0, index)){readString()} to v.copyOfRange(index + 1, v.size)
+        }
         it[Int::class] = cInt
         it[Short::class] = cShort
         it[Long::class] = cLong
@@ -88,21 +108,21 @@ object VBP{
         it[ULongMapField::class] = cULong
         it[StringMapField::class] = cString
 
-        it[EnumField::class] = {field, v->
-            val enums:Array<*> = (field as EnumField<*>).enums
-            val index:Int = readBytes(v){readInt()} as Int
-            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
-        }
-        it[EnumListField::class] = {field, v->
-            val enums:Array<*> = (field as EnumListField<*>).enums
-            val index:Int = readBytes(v){readInt()} as Int
-            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
-        }
-        it[EnumMapField::class] = {field, v->
-            val enums:Array<*> = (field as EnumMapField<*>).enums
-            val index:Int = readBytes(v){readInt()} as Int
-            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
-        }
+//        it[EnumField::class] = {field, v->
+//            val enums:Array<*> = (field as EnumField<*>).enums
+//            val index:Int = readBytes(v){readInt()} as Int
+//            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+//        }
+//        it[EnumListField::class] = {field, v->
+//            val enums:Array<*> = (field as EnumListField<*>).enums
+//            val index:Int = readBytes(v){readInt()} as Int
+//            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+//        }
+//        it[EnumMapField::class] = {field, v->
+//            val enums:Array<*> = (field as EnumMapField<*>).enums
+//            val index:Int = readBytes(v){readInt()} as Int
+//            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+//        }
     }
     private val OPTIONAL_NULL:ByteArray = byteArrayOf(1.toByte())
 
@@ -208,11 +228,11 @@ object VBP{
         target[DoubleMapField::class] = map
         target[BooleanListField::class] = map
     }
-    internal fun parseValue(type:Any, field:Any, v:ByteArray):Any = (parsers[type] ?: throw Throwable("invalid parser type $type"))(field, v)
+    internal fun parseValue(type:Any, field:Any, v:ByteArray):Pair<Any, ByteArray>? = (parsers[type] ?: throw Throwable("invalid parser type $type"))(field, v)
     private suspend inline fun FlowCollector<ByteArray>.binarify(type:KClass<*>, v:Any){
         (binarifier[type] ?: throw Throwable("invalid stringify type $type"))(v)
     }
-    fun setParser(type:Any, parser:(Any, ByteArray)->Any){
+    fun setParser(type:Any, parser:(Any, ByteArray)->Pair<Any, ByteArray>?){
         parsers[type] = parser}
     fun setBinarifier(type:KClass<*>, binary:suspend FlowCollector<ByteArray>.(Any)->Unit){
         binarifier[type] = binary

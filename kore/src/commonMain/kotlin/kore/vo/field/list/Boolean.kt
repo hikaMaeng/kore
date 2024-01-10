@@ -3,12 +3,12 @@
 package kore.vo.field.list
 
 import kore.vo.VO
-import kore.vo.field.Field
+import kore.vo.field.ListFields
 import kore.vo.field.Prop
 import kore.vo.field.list.BooleanListField.T
 import kore.vo.task.Task
 
-object BooleanListField:Field<MutableList<Boolean>>{
+object BooleanListField:ListFields<Boolean>{
     override fun defaultFactory():MutableList<Boolean> = arrayListOf()
     class T:Task(){
         fun default(v:MutableList<Boolean>){

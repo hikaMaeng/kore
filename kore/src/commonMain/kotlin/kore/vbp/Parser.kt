@@ -4,12 +4,17 @@ package kore.vbp
 
 import kore.vo.VO
 import kore.vo.converter.ToVONoInitialized
+import kore.vo.field
 import kore.vo.field.*
 import kore.vo.task.Task
 import kore.vosn.VSON
+import kotlin.collections.EmptyMap.keys
 
 internal class Parser<V:VO>(val vo:V){
-    private data class Stack(val type:Any, val target:Any, var key:String = "", var index:Int = 0)
+    companion object{
+        val EMPTY:ByteArray = byteArrayOf()
+    }
+    private data class Stack(val type:Any, val target:Any, var key:String = "", var index:Int = 0U)
     private var curr:Stack = Stack(vo, vo)
     private var currArray:ByteArray = byteArrayOf()
     private val stack:ArrayList<Stack> = arrayListOf(curr)
@@ -17,71 +22,59 @@ internal class Parser<V:VO>(val vo:V){
     private var state:Int = 100
     private var next:Int = 0
     private var s:ByteArray = byteArrayOf()
-    private var c:Int = 0
     private var buffer:StringBuilder = StringBuilder(1000)
     private var flushed:String = ""
     private inline fun err(msg:String):Nothing = throw Throwable(msg + " $state, $c, ${s[c]}, $s")
 
     operator fun invoke(input:ByteArray):Pair<ByteArray, V>? = if(input.isEmpty()) null else{
-        s = input
-        c = 0
+        if(input.isNotEmpty()) s += input
         run()?.let{it to vo}
     }
     private inline fun run():ByteArray?{
-        while(c < s.size){
+        while(s.isNotEmpty()){
             when(state){
-                0->spaceRead()
-                10->if(s[c++] == '"') state = 11 else err("invalid string start")
-                11->readWhile(true){it != '"'}
-                20->readWhile(false){it in "0123456789-."}
-                30->wordRead("true")
-                40->wordRead("false")
-                50->wordRead("null")
-                100-> {
-                    val vo:VO = curr.target as VO
-                    val fields:HashMap<String, Field<*>> = vo.getFields() ?: ToVONoInitialized(vo, "no fields").terminate()
-                    val keys:List<String> = VO.keys(vo) ?: ToVONoInitialized(vo, "no keys").terminate()
-                    val tasks:HashMap<String, Task>? = vo.getTasks()
-                    val key= keys[curr.index]
-                    val field:Field<*>? = fields[key]
-
-                }
-
-
-                    when(s[c]){ /** value or push stack */
-                    '"'-> stringRead(106)
-                    '0','1','2','3','4','5','6','7','8','9','-','.'->numRead(106)
-                    't'->trueRead(106)
-                    'f'->falseRead(106)
-                    'n'->nullRead(106)
-                    '[','{'->{
-                        val (type, target, key) = curr
-                        when(target){
-                            is VO->target.getFields()?.get(key)?.let{field->
-                                stack.add(Stack(
-                                    field,
-                                    when(field){
-                                        is VOSumField<*>->hashMapOf<String, String>()
-                                        else->target[key] ?: field.defaultFactory()
-                                    }
-                                ).also{curr = it})
-                            } ?: err("invalid VO field")
-                            is MutableList<*>->when(type){
-                                is VOListField<*>->type.factory().let{vo->stack.add(Stack(vo, vo).also{curr = it})}
-                                is VOSumListField<*>->stack.add(Stack(type, hashMapOf<String, String>()).also{curr = it})
-                                else->err("invalid stack open []")
+                100->{
+                    val (type, target, key) = curr
+                    when(target){
+                        is VO->{
+                            val v:Int = s[0].toInt()
+                            s = s.copyOfRange(1, s.size)
+                            if(v == 255) state = 2000 else {
+                                curr.index = v
+                                state = 101
                             }
-                            is MutableMap<*, *>->when(type){
-                                is VOMapField<*>->type.factory().let{vo->stack.add(Stack(vo, vo).also {curr = it})}
-                                is VOSumMapField<*>->stack.add(Stack(type, hashMapOf<String, String>()).also {curr = it})
-                                else->err("invalid stack open {}")
-                            }
-                            else->err("invalid stack open")
                         }
-                        c++
-                        nextItem()
+                        is MutableMap<*, *>->(target as MutableMap<String, Any>)[key] = when(type){
+                            is VOSumField<*>, is VOSumListField<*>, is VOSumMapField<*>->flushed
+                            else->VSON.parseValue(type::class, type, flushed)
+                        }
+                        is MutableList<*>->(target as? MutableList<Any>)?.add(VSON.parseValue(type::class, type, flushed))
+                        else->err("invalid value")
                     }
-                    else->err("invalid value")
+                }
+                101->{
+                    val vo:VO = curr.target as VO
+                    val (key:String, field:Field<*>) = vo.field(curr.index)
+                    when(field){
+                        is ListFields<*>->state = 1010
+                        is MapFields<*>->state = 1020
+                        is VOField<*>->state = 1030
+                        is VOListField<*>->state = 1040
+                        is VOMapField<*>->state = 1050
+                        is VOSumField<*>->state = 1060
+                        is VOSumListField<*>->state = 1070
+                        is VOSumMapField<*>->state = 1080
+                        is EnumListField<*>->state = 1090
+                        is EnumMapField<*>->state = 1100
+                        else->VBP.parseValue(field::class, field, s)?.let{(v, arr)->
+                            vo[key] = when(field){
+                                is EnumField<*>->field.enums[v as Int]
+                                else->v
+                            }
+                            s = arr
+                            state = 100
+                        } ?: return null
+                    }
                 }
                 106->{ /** assign */
                     val (type, target, key) = curr

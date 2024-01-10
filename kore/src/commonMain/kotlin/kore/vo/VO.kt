@@ -96,3 +96,7 @@ abstract class VO(@PublishedApi internal val useInstanceField:Boolean = false){ 
         return _delegateProvider as Prop<VALUE>
     }
 }
+inline fun VO.field(key:String):Field<*> = getFields()!![key]!!
+inline fun VO.field(index:Int):Pair<String, Field<*>> = VO.keys(this)!![index].let{
+    it to getFields()!![it]!!
+}

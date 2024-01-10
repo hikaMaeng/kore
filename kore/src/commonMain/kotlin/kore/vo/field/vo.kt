@@ -7,7 +7,7 @@ import kore.vo.task.Task
 import kore.vo.task.Task.Default
 import kotlin.reflect.KClass
 
-class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
+class VOField<V: VO>(val cls: KClass<V>, val factory:()->V):Field<V>{
     override fun defaultFactory():V = factory()
     class T<V:VO>: Task(){
         fun default(block:()->V){
@@ -16,10 +16,10 @@ class VOField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<V>{
     }
     companion object{
         @PublishedApi internal val fields:HashMap<KClass<out VO>, VOField<out VO>> = hashMapOf()
-        inline operator fun <V:VO> get(cls:KClass<V>, noinline factory:()->V): VOField<V> = fields.getOrPut(cls){VOField(cls, factory)} as VOField<V>
+        inline operator fun <V:VO> get(cls:KClass<V>, noinline factory:()->V):VOField<V> = fields.getOrPut(cls){VOField(cls, factory)} as VOField<V>
     }
 }
-inline fun <reified V:VO> VO.vo(noinline factory:()->V): Prop<V> = delegate(VOField[V::class, factory])
+inline fun <reified V:VO> VO.vo(noinline factory:()->V):Prop<V> = delegate(VOField[V::class, factory])
 inline fun <reified V:VO> VO.vo(noinline factory:()->V, block: VOField.T<V>.()->Unit): Prop<V> = delegate(VOField[V::class, factory], block){ VOField.T() }
 class VOListField<V: VO>(val cls: KClass<V>, val factory:()->V): Field<MutableList<V>>{
     override fun defaultFactory():MutableList<V> = arrayListOf()

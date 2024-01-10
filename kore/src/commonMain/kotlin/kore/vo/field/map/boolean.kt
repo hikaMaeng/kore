@@ -3,12 +3,12 @@
 package kore.vo.field.map
 
 import kore.vo.VO
-import kore.vo.field.Field
+import kore.vo.field.MapFields
 import kore.vo.field.Prop
 import kore.vo.task.Task
 import kore.vo.task.Task.Default
 
-object BooleanMapField:Field<MutableMap<String, Boolean>>{
+object BooleanMapField:MapFields<Boolean> {
     override fun defaultFactory():MutableMap<String, Boolean> = hashMapOf()
     class T:Task(){
         fun default(v:MutableMap<String, Boolean>){

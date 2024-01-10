@@ -3,11 +3,11 @@
 package kore.vo.field.list
 
 import kore.vo.VO
-import kore.vo.field.Field
+import kore.vo.field.ListFields
 import kore.vo.field.Prop
 import kore.vo.task.Task
 
-object UShortListField:Field<MutableList<UShort>>{
+object UShortListField:ListFields<UShort> {
     override fun defaultFactory():MutableList<UShort> = arrayListOf()
     class T:Task(){
         fun default(v:MutableList<UShort>){
