@@ -4,7 +4,6 @@ package kore.vbp
 
 import kore.vo.VO
 import kore.vo.converter.ToNoConverter
-import kore.vo.converter.ToNullField
 import kore.vo.converter.ToVONoInitialized
 import kore.vo.field.*
 import kore.vo.field.list.*
@@ -26,6 +25,7 @@ object VBP{
         return byteArray
     }
     private inline fun readBytes(arr:ByteArray, block:Buffer.()->Any):Any{
+
         val buffer:Buffer = Buffer()
         buffer.write(arr)
         val v:Any = buffer.block()
@@ -138,25 +138,14 @@ object VBP{
                 val key:String = keys[i]
                 val include:((String, Any?) -> Boolean)? = tasks?.get(key)?.include
                 val v:Any? = vo[key]
-                println("key:$key, v:$v")
-                if(v != null){
-                    if(include == null || include(key, v)){
-                        val field:Field<*> = fields[key] ?: ToVONoInitialized(vo, "key:$key, v:$v").terminate()
-                        val converter:suspend FlowCollector<ByteArray>.(Any)->Unit = target[field::class] ?: ToNoConverter(vo, "field:${field::class.simpleName}, key:$key, v:$v").terminate()
-                        converter(v)
-                    }
-                }else{
-                    if(include == null || (include != Task.EXCLUDE && include != Task.OPTIONAL && include(key, v))) ToNullField(vo, "key:$key, v:$v").terminate()
-                    else{
-                        // 이 경우 옵셔널일 때만 ~를 마크함
-                        if(include == Task.OPTIONAL){
-                            println("optional key:$key, v:$v")
-                            emit(OPTIONAL_NULL)
-                        }
-                    }
-
+                if(v != null && (include == null || include(key, v))){
+                    val field:Field<*> = fields[key] ?: ToVONoInitialized(vo, "key:$key, v:$v").terminate()
+                    val converter:suspend FlowCollector<ByteArray>.(Any)->Unit = target[field::class] ?: ToNoConverter(vo, "field:${field::class.simpleName}, key:$key, v:$v").terminate()
+                    emit(byteArrayOf(i.toByte()))
+                    converter(v)
                 }
             }while(++i < size)
+            emit(byteArrayOf(-1))
         }
         target[VOSumField::class] = target[VOField::class]!!
         target[StringField::class] = {
@@ -243,6 +232,7 @@ object VBP{
         value.collect {
             var arr:ByteArray? = it
             while(arr != null) arr = parser(arr)?.let{(s, vo)->
+                println("from ${s.joinToString(",")}, ${vo}")
                 emitter.emit(vo)
                 s
             }

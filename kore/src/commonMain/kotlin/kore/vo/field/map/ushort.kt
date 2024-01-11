@@ -3,12 +3,12 @@
 package kore.vo.field.map
 
 import kore.vo.VO
-import kore.vo.field.Field
+import kore.vo.field.MapFields
 import kore.vo.field.Prop
 import kore.vo.task.Task
 import kore.vo.task.Task.Default
 
-object UShortMapField:MapFields<UShort>>{
+object UShortMapField:MapFields<UShort> {
     override fun defaultFactory():MutableMap<String, UShort> = hashMapOf()
     class T:Task(){
         fun default(v:MutableMap<String, UShort>){

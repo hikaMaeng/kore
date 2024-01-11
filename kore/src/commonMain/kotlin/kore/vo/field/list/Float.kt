@@ -3,13 +3,12 @@
 package kore.vo.field.list
 
 import kore.vo.VO
-import kore.vo.field.Field
 import kore.vo.field.ListFields
 import kore.vo.field.Prop
 import kore.vo.field.list.FloatListField.T
 import kore.vo.task.Task
 
-object FloatListField:ListFields<Float>>{
+object FloatListField:ListFields<Float>{
     override fun defaultFactory():MutableList<Float> = arrayListOf()
     class T:Task(){
         fun default(v:MutableList<Float>){

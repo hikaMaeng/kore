@@ -1,11 +1,13 @@
 package vbp
 
 import kore.bytes.Bytes
+import kore.vbp.VBP
 import kore.vo.VO
 import kore.vo.field.value.*
-import kore.vbp.VBP
 import kore.vosn.VSON
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.*
 import kotlin.test.Test
@@ -44,19 +46,41 @@ class test1 {
             }
             println("---${arr.joinToString { "$it" }}---")
             val buffer = Buffer().also {
+                it.writeByte(0)
                 it.writeInt(1)
-                it.writeShort(123)
-                it.writeLong(121444)
-                it.writeFloat(1.2f)
-                it.writeDouble(1.3)
                 it.writeByte(1)
+                it.writeShort(123)
+                it.writeByte(2)
+                it.writeLong(121444)
+                it.writeByte(3)
+                it.writeFloat(1.2f)
+                it.writeByte(4)
+                it.writeDouble(1.3)
+                it.writeByte(5)
+                it.writeByte(1)
+                it.writeByte(6)
                 it.writeUInt(1u)
+                it.writeByte(7)
                 it.writeUShort(2u)
+                it.writeByte(8)
                 it.writeULong(3u)
+                it.writeByte(9)
                 it.writeString("abc")
                 it.writeByte(0)
+                it.writeByte(-1)
             }.readByteArray()
             assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
+            val v = VBP.from(Test1(), flow{emit(arr)}).last()
+            assertEquals(v.a, 1)
+            assertEquals(v.b, 123.toShort())
+            assertEquals(v.c, 121444L)
+            assertEquals(v.d, 1.2f)
+            assertEquals(v.e, 1.3)
+            assertEquals(v.f, true)
+            assertEquals(v.g, 1u)
+            assertEquals(v.h, 2u)
+            assertEquals(v.i, 3u)
+            assertEquals(v.j, "abc")
         }
     }
     class Test2:VO(){
