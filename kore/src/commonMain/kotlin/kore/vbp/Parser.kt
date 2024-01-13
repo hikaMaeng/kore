@@ -10,12 +10,14 @@ internal class Parser<V:VO>(val vo:V){
     companion object{
         val EMPTY:ByteArray = byteArrayOf()
     }
-    private data class Stack(val type:Any, val target:Any, var key:String = "", var index:Int = 0)
+    private data class Stack(val type:Any, val target:Any, var key:String = "", var field:Field<*>? = null)
+
     private var curr:Stack = Stack(vo, vo)
     private val stack:ArrayList<Stack> = arrayListOf(curr)
 
     private var state:Int = 100
-    private var s:ByteArray = byteArrayOf()
+    private var next:Int = 0
+    private var s:ByteQueue = ByteQueue()
 
     operator fun invoke(input:ByteArray):Pair<ByteArray, V>?{
         if(input.isNotEmpty()) s += input
@@ -27,24 +29,45 @@ internal class Parser<V:VO>(val vo:V){
             when(state){
                 100->{/** VO 필드 인식 1바이트 */
                     println("100 ${s.joinToString(",")}")
-                    val (type, target, key) = curr
-                    when(target){
+                    when(curr.target){
                         is VO->{
-                            val v:Int = s[0].toInt()
-                            s = s.copyOfRange(1, s.size)
-                            if(v == -1) state = 120 else { /** 120은 VO종료 */
-                                curr.index = v
+                            val index:Int = s.dropOne().toInt()
+                            if(index == -1) state = 120 else { /** 120은 VO종료 */
+                                vo.field(index).let{(k, f)->
+                                    curr.key = k
+                                    curr.field = f
+                                    when(field) {
+                                        is ListFields<*>-> {
+                                            stack.add(Stack(field, vo[key] ?: field.defaultFactory()).also {curr = it})
+                                            state = 1010
+                                        }
+                                        is MapFields<*>->state = 1020
+                                        is VOField<*>->state = 1030
+                                        is VOListField<*>->state = 1040
+                                        is VOMapField<*>->state = 1050
+                                        is VOSumField<*>->state = 1060
+                                        is VOSumListField<*>->state = 1070
+                                        is VOSumMapField<*>->state = 1080
+                                        is EnumListField<*>->state = 1090
+                                        is EnumMapField<*>->state = 1100
+                                        else->
+                                    }
+                                }
+                                next = 100
                                 state = 110
                             }
                         }
                     }
                 }
                 110->{ /** VO 필드 값처리 */
-                    println("110 ${s.joinToString(",")}, ${curr.index}")
+                    println("110 ${s.joinToString(",")}, ${curr.key}")
                     val vo:VO = curr.target as VO
-                    val (key:String, field:Field<*>) = vo.field(curr.index)
+
                     when(field){
-                        is ListFields<*>->state = 1010
+                        is ListFields<*>->{
+                            stack.add(Stack(field, vo[key] ?: field.defaultFactory()).also{curr = it})
+                            state = 1010
+                        }
                         is MapFields<*>->state = 1020
                         is VOField<*>->state = 1030
                         is VOListField<*>->state = 1040
