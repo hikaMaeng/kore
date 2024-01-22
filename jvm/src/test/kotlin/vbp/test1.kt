@@ -3,7 +3,14 @@ package vbp
 import kore.bytes.Bytes
 import kore.vbp.VBP
 import kore.vo.VO
+import kore.vo.field.list.intList
+import kore.vo.field.list.stringList
+import kore.vo.field.map.intMap
+import kore.vo.field.map.stringMap
 import kore.vo.field.value.*
+import kore.vo.field.vo
+import kore.vo.field.voList
+import kore.vo.field.voMap
 import kore.vosn.VSON
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
@@ -141,6 +148,196 @@ class test1 {
             }
 //            assertEquals(str, "1|15|1.2|a\\|b~c\\!\\\\n")
 
+        }
+    }
+    class Test3:VO(){
+        var a by intList
+        var b by stringList
+        var c by intMap
+        var d by stringMap
+    }
+    @Test
+    fun test3(){
+        runBlocking{
+            val vo = Test3().also {
+                it.a = mutableListOf(1, 2, 3)
+                it.b = mutableListOf("a", "b", "c")
+                it.c = mutableMapOf("a" to 2, "b" to 3)
+                it.d = mutableMapOf("a" to "b", "c" to "d")
+            }
+            assertEquals(vo.a, mutableListOf(1, 2, 3))
+            assertEquals(vo.b, mutableListOf("a", "b", "c"))
+            assertEquals(vo.c, mutableMapOf("a" to 2, "b" to 3))
+            assertEquals(vo.d, mutableMapOf("a" to "b", "c" to "d"))
+            val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                acc + c
+            }
+            val buffer = Buffer().also {
+                it.writeByte(0)
+                it.writeInt(3)
+                it.writeInt(1)
+                it.writeInt(2)
+                it.writeInt(3)
+                it.writeByte(1)
+                it.writeInt(3)
+                it.writeString("a")
+                it.writeByte(0)
+                it.writeString("b")
+                it.writeByte(0)
+                it.writeString("c")
+                it.writeByte(0)
+                it.writeByte(2)
+                it.writeInt(2)
+                it.writeString("a")
+                it.writeByte(0)
+                it.writeInt(2)
+                it.writeString("b")
+                it.writeByte(0)
+                it.writeInt(3)
+                it.writeByte(3)
+                it.writeInt(2)
+                it.writeString("a")
+                it.writeByte(0)
+                it.writeString("b")
+                it.writeByte(0)
+                it.writeString("c")
+                it.writeByte(0)
+                it.writeString("d")
+                it.writeByte(0)
+                it.writeByte(-1)
+            }.readByteArray()
+            assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
+            val v = VBP.from(Test3(), flow{emit(arr)}).last()
+            assertEquals(v.a, mutableListOf(1, 2, 3))
+            assertEquals(v.b, mutableListOf("a", "b", "c"))
+            assertEquals(v.c, mutableMapOf("a" to 2, "b" to 3))
+            assertEquals(v.d, mutableMapOf("a" to "b", "c" to "d"))
+        }
+    }
+    class Test4:VO(){
+        class Sub:VO(){
+            var a by int
+            var b by string
+        }
+
+        var a by intList
+        var b by vo(::Sub)
+        var c by intMap
+    }
+    @Test
+    fun test4() {
+        runBlocking {
+            val vo = Test4().also {
+                it.a = mutableListOf(1, 2, 3)
+                it.b = Test4.Sub().also {sub->
+                    sub.a = 1
+                    sub.b = "abc"
+                }
+                it.c = mutableMapOf("a" to 2, "b" to 3)
+            }
+            assertEquals(vo.a, mutableListOf(1, 2, 3))
+            assertEquals(vo.b.a, 1)
+            assertEquals(vo.b.b, "abc")
+            assertEquals(vo.c, mutableMapOf("a" to 2, "b" to 3))
+            val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                acc + c
+            }
+            val buffer = Buffer().also {
+                it.writeByte(0)
+                it.writeInt(3)
+                it.writeInt(1)
+                it.writeInt(2)
+                it.writeInt(3)
+                it.writeByte(1)
+                it.writeByte(0)
+                it.writeInt(1)
+                it.writeByte(1)
+                it.writeString("abc")
+                it.writeByte(0)
+                it.writeByte(-1)
+                it.writeByte(2)
+                it.writeInt(2)
+                it.writeString("a")
+                it.writeByte(0)
+                it.writeInt(2)
+                it.writeString("b")
+                it.writeByte(0)
+                it.writeInt(3)
+                it.writeByte(-1)
+            }.readByteArray()
+            assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
+            val v = VBP.from(Test4(), flow{emit(arr)}).last()
+            assertEquals(v.a, mutableListOf(1, 2, 3))
+            assertEquals(v.b.a, 1)
+            assertEquals(v.b.b, "abc")
+            assertEquals(v.c, mutableMapOf("a" to 2, "b" to 3))
+        }
+    }
+    class Test5:VO(){
+        class Sub:VO(){
+            var a by int
+            var b by string
+        }
+
+        var a by voList(::Sub)
+        var b by vo(::Sub)
+        var c by voMap(::Sub)
+    }
+    @Test
+    fun test5() {
+        runBlocking {
+            val vo = Test5().also {
+                it.a = mutableListOf(
+                    Test5.Sub().also {sub->
+                        sub.a = 1
+                        sub.b = "a"
+                    },
+                    Test5.Sub().also {sub->
+                        sub.a = 2
+                        sub.b = "b"
+                    }
+                )
+                it.b = Test5.Sub().also {sub->
+                    sub.a = 3
+                    sub.b = "c"
+                }
+                it.c = mutableMapOf(
+                    "a" to Test5.Sub().also {sub->
+                        sub.a = 4
+                        sub.b = "d"
+                    },
+                    "b" to Test5.Sub().also {sub->
+                        sub.a = 5
+                        sub.b = "e"
+                    }
+                )
+            }
+            assertEquals(vo.a[0].a, 1)
+            assertEquals(vo.a[0].b, "a")
+            assertEquals(vo.a[1].a, 2)
+            assertEquals(vo.a[1].b, "b")
+            assertEquals(vo.b.a, 3)
+            assertEquals(vo.b.b, "c")
+            assertEquals(vo.c["a"]?.a, 4)
+            assertEquals(vo.c["a"]?.b, "d")
+            assertEquals(vo.c["b"]?.a, 5)
+            assertEquals(vo.c["b"]?.b, "e")
+
+            val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                acc + c
+            }
+            println("ARR ${arr.joinToString { "$it" }}")
+            val v = VBP.from(Test5(), flow{emit(arr)}).last()
+            assertEquals(v.a[0].a, 1)
+            assertEquals(v.a[0].b, "a")
+            assertEquals(v.a[1].a, 2)
+            assertEquals(v.a[1].b, "b")
+            assertEquals(v.b.a, 3)
+            assertEquals(v.b.b, "c")
+            assertEquals(v.c["a"]?.a, 4)
+            assertEquals(v.c["a"]?.b, "d")
+            assertEquals(v.c["b"]?.a, 5)
+            assertEquals(v.c["b"]?.b, "e")
         }
     }
 }

@@ -25,44 +25,43 @@ object VBP{
         return byteArray
     }
     private inline fun readBytes(arr:ByteArray, block:Buffer.()->Any):Any{
-
         val buffer:Buffer = Buffer()
         buffer.write(arr)
         val v:Any = buffer.block()
         buffer.close()
         return v
     }
-    private val parsers:HashMap<Any, (Any, ByteArray)->Pair<Any, ByteArray>?> = HashMap<Any, (Any, ByteArray)->Pair<Any, ByteArray>?>(100).also{
-        val cInt:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 4) null else readBytes(v){readInt()} to v.copyOfRange(4, v.size)
+    private val parsers:HashMap<Any, (Any, ByteQueue)->Any?> = HashMap<Any, (Any, ByteQueue)->Any?>(100).also{
+        val cInt:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 4) null else v.buffer(4){readInt()}
         }
-        val cShort:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 2) null else readBytes(v){readShort()} to v.copyOfRange(2, v.size)
+        val cShort:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 2) null else v.buffer(2){readShort()}
         }
-        val cLong:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 8) null else readBytes(v){readLong()} to v.copyOfRange(8, v.size)
+        val cLong:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 8) null else v.buffer(8){readLong()}
         }
-        val cFloat:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 4) null else readBytes(v){readFloat()} to v.copyOfRange(4, v.size)
+        val cFloat:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 4) null else v.buffer(4){readFloat()}
         }
-        val cDouble:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 8) null else readBytes(v){readDouble()} to v.copyOfRange(8, v.size)
+        val cDouble:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 8) null else v.buffer(8){readDouble()}
         }
-        val cBoolean:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            readBytes(v){readByte().toInt() == 1} to v.copyOfRange(1, v.size)
+        val cBoolean:(Any, ByteQueue)->Any? = {_, v->
+            v.buffer(1){readByte().toInt() == 1}
         }
-        val cUInt:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 4) null else readBytes(v){readUInt()} to v.copyOfRange(4, v.size)
+        val cUInt:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 4) null else v.buffer(4){readUInt()}
         }
-        val cUShort:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 2) null else readBytes(v){readUShort()} to v.copyOfRange(2, v.size)
+        val cUShort:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 2) null else v.buffer(2){readUShort()}
         }
-        val cULong:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
-            if(v.size < 8) null else readBytes(v){readULong()} to v.copyOfRange(8, v.size)
+        val cULong:(Any, ByteQueue)->Any? = {_, v->
+            if(v.size < 8) null else v.buffer(8){readULong()}
         }
-        val cString:(Any, ByteArray)->Pair<Any, ByteArray>? = {_, v->
+        val cString:(Any, ByteQueue)->Any? = {_, v->
             val index:Int = v.indexOf(0.toByte())
-            if(index == -1) null else readBytes(v.copyOfRange(0, index)){readString()} to v.copyOfRange(index + 1, v.size)
+            if(index == -1) null else v.buffer(index + 1){readString()}.dropLast(1)
         }
         it[Int::class] = cInt
         it[Short::class] = cShort
@@ -168,7 +167,7 @@ object VBP{
             it as List<Any>
             val size:Int = it.size
             var i:Int = 0
-            emit(writeBytes{writeInt(it as Int)})
+            emit(writeBytes{writeInt(size)})
             do{
                 block(it[i++])
             }while(i < size)
@@ -176,23 +175,22 @@ object VBP{
         target[VOListField::class] = getList{binarify(VOField::class, it)}
         target[VOSumListField::class] = target[VOListField::class]!!
         target[EnumListField::class] = getList{binarify(EnumField::class, it)}
-        val list:suspend FlowCollector<ByteArray>.(v: Any)->Unit = getList{binarify(it::class, it)}
-        target[IntListField::class] = list
-        target[ShortListField::class] = list
-        target[LongListField::class] = list
-        target[UIntListField::class] = list
-        target[UShortListField::class] = list
-        target[ULongListField::class] = list
-        target[FloatListField::class] = list
-        target[DoubleListField::class] = list
-        target[BooleanListField::class] = list
-        target[StringListField::class] = list
+        target[IntListField::class] = getList{binarify(IntField::class, it)}
+        target[ShortListField::class] = getList{binarify(ShortField::class, it)}
+        target[LongListField::class] = getList{binarify(LongField::class, it)}
+        target[UIntListField::class] = getList{binarify(UIntField::class, it)}
+        target[UShortListField::class] = getList{binarify(UShortField::class, it)}
+        target[ULongListField::class] = getList{binarify(ULongField::class, it)}
+        target[FloatListField::class] = getList{binarify(FloatField::class, it)}
+        target[DoubleListField::class] = getList{binarify(DoubleField::class, it)}
+        target[BooleanListField::class] = getList{binarify(BooleanField::class, it)}
+        target[StringListField::class] = getList{binarify(StringField::class, it)}
         fun getMap(block:suspend FlowCollector<ByteArray>.(Any)->Unit):suspend FlowCollector<ByteArray>.(v: Any)->Unit = {
             it as Map<String, Any>
             val keys:Array<String> = it.keys.toTypedArray()
             val size:Int = keys.size
             var i:Int = 0
-            emit(writeBytes{writeInt(it as Int)})
+            emit(writeBytes{writeInt(size)})
             do{
                 val key:String = keys[i++]
                 emit(writeBytes{
@@ -206,22 +204,22 @@ object VBP{
         target[VOSumMapField::class] = target[VOMapField::class]!!
         target[EnumMapField::class] = getMap{binarify(EnumField::class, it)}
         val map:suspend FlowCollector<ByteArray>.(v:Any)->Unit = getMap{binarify(it::class, it)}
-        target[StringMapField::class] = map
-        target[IntMapField::class] = map
-        target[ShortMapField::class] = map
-        target[LongMapField::class] = map
-        target[UIntMapField::class] = map
-        target[UShortMapField::class] = map
-        target[ULongMapField::class] = map
-        target[FloatMapField::class] = map
-        target[DoubleMapField::class] = map
-        target[BooleanListField::class] = map
+        target[IntMapField::class] = getMap{binarify(IntField::class, it)}
+        target[ShortMapField::class] = getMap{binarify(ShortField::class, it)}
+        target[LongMapField::class] = getMap{binarify(LongField::class, it)}
+        target[UIntMapField::class] = getMap{binarify(UIntField::class, it)}
+        target[UShortMapField::class] = getMap{binarify(UShortField::class, it)}
+        target[ULongMapField::class] = getMap{binarify(ULongField::class, it)}
+        target[FloatMapField::class] = getMap{binarify(FloatField::class, it)}
+        target[DoubleMapField::class] = getMap{binarify(DoubleField::class, it)}
+        target[BooleanListField::class] = getMap{binarify(BooleanField::class, it)}
+        target[StringMapField::class] = getMap{binarify(StringField::class, it)}
     }
-    internal fun parseValue(type:Any, field:Any, v:ByteArray):Pair<Any, ByteArray>? = (parsers[type] ?: throw Throwable("invalid parser type $type"))(field, v)
+    internal fun parseValue(type:Any, field:Any, v:ByteQueue):Any? = (parsers[type] ?: throw Throwable("invalid parser type $type, ${parsers[type]}, ${parsers[IntListField::class]}"))(field, v)
     private suspend inline fun FlowCollector<ByteArray>.binarify(type:KClass<*>, v:Any){
         (binarifier[type] ?: throw Throwable("invalid stringify type $type"))(v)
     }
-    fun setParser(type:Any, parser:(Any, ByteArray)->Pair<Any, ByteArray>?){
+    fun setParser(type:Any, parser:(Any, ByteQueue)->Any?){
         parsers[type] = parser}
     fun setBinarifier(type:KClass<*>, binary:suspend FlowCollector<ByteArray>.(Any)->Unit){
         binarifier[type] = binary
@@ -236,6 +234,7 @@ object VBP{
                 emitter.emit(vo)
                 s
             }
+            emitter.emit(vo)
         }
     }
     fun to(vo:VO):Flow<ByteArray> = flow{binarify(VOField::class, vo)}
