@@ -3,6 +3,7 @@
 package kore.vbp
 
 import kore.vo.VO
+import kore.vo.VOSum
 import kore.vo.field
 import kore.vo.field.*
 
@@ -31,6 +32,7 @@ internal class Parser<V:VO>(val vo:V){
             when(state){
                 1000->{ //size계산
                     VBP.parseValue(Int::class, Int::class, que)?.let{v->
+                        println("1000 ${curr.target}, $v")
                         curr.size = v as Int
                         state = next
                     } ?: return null
@@ -90,8 +92,8 @@ internal class Parser<V:VO>(val vo:V){
                     state = if(curr.size == 0) 1100 else{
                         curr.size--
                         when(val f = curr.field){
-                            is VOListField<*>->stack.add(Stack(f::class, f.factory(), f).also{curr = it})
                             is VOMapField<*>->stack.add(Stack(f::class, f.factory(), f).also{curr = it})
+                            is VOListField<*>->stack.add(Stack(f::class, f.factory(), f).also{curr = it})
                             else->throw Throwable("invalid field $f")
                         }
                         100
@@ -119,9 +121,11 @@ internal class Parser<V:VO>(val vo:V){
                                     state = 1000
                                 }
                                 is VOField<*>->{
+                                    println("VOField ${f::class} -----------------------------------------------")
                                     stack.add(Stack(f::class, vo[k] ?: f.factory(), f).also{curr = it})
                                 }
                                 is VOListField<*>->{
+                                    println("VOListField ${f::class} -----------------------------------------------")
                                     stack.add(Stack(f::class, vo[k] ?: f.defaultFactory(), f).also{curr = it})
                                     next = 90
                                     state = 1000
@@ -133,9 +137,24 @@ internal class Parser<V:VO>(val vo:V){
                                     mapValue = 90
                                     state = 1000
                                 }
-                                is VOSumField<*>->state = 1060
-                                is VOSumListField<*>->state = 1070
-                                is VOSumMapField<*>->state = 1080
+                                is VOSumField<*>->{
+                                    println("VOSumField ${f::class} -----------------------------------------------")
+                                    curr.size = 1
+                                    state = 200
+                                }
+                                is VOSumListField<*>->{
+                                    println("VOSumListField ${f::class} -----------------------------------------------")
+                                    stack.add(Stack(f::class, vo[k] ?: f.defaultFactory(), f).also{curr = it})
+                                    next = 200
+                                    state = 1000
+                                }
+                                is VOSumMapField<*>->{
+                                    println("VOSumMapField ${f::class} -----------------------------------------------")
+                                    stack.add(Stack(f::class, vo[k] ?: f.defaultFactory(), f).also{curr = it})
+                                    next = 1020
+                                    mapValue = 200
+                                    state = 1000
+                                }
                                 else->{
                                     curr.field = f
                                     state = 110
@@ -144,7 +163,8 @@ internal class Parser<V:VO>(val vo:V){
                         }
                     }
                 }
-                110->{
+                110->{ /** vo 값필드 처리 */
+                    println("110 ${curr.target}, ${curr.field}, ${que.joinToString(",")}")
                     val f = curr.field!!
                     VBP.parseValue(f::class, f, que)?.let{v->
                         val vo:VO = curr.target as VO
@@ -163,8 +183,8 @@ internal class Parser<V:VO>(val vo:V){
                             is List<*>->{
                                 val list:MutableList<Any?> = curr.target as MutableList<Any?>
                                 list.add(prev.target)
-                                println("120-1 ${list.joinToString(",")}")
-                                state = 90
+                                println("120-1 ${list.joinToString(",")}, ${curr.field}")
+                                state = if(curr.field is VOSumListField<*>) 200 else 90
                             }
                             is Map<*, *>->{
                                 val map:MutableMap<String, Any?> = curr.target as MutableMap<String, Any?>
@@ -178,6 +198,26 @@ internal class Parser<V:VO>(val vo:V){
                                 state = 100
                             }
                         }
+                    }
+                }
+                200->{ /** Sum타입의 구상타입 인덱스 확인*/
+                    println("200 ${curr.target}, ${que.joinToString(",")}")
+                    state = if(curr.size == 0) 1100 else {
+                        curr.size--
+                        val index:Int = que.dropOne().toInt()
+                        val f:Field<*> = curr.field!!
+                        val sum:VOSum<VO> = when(f) {
+                            is VOSumField<*>->f.sum
+                            is VOSumListField<*>->f.sum
+                            is VOSumMapField<*>->f.sum
+                            else->throw Throwable("invalid sum field $f")
+                        }
+                        println("200-1 $index, $f, ${que.joinToString(",")}")
+                        sum.factories[index].let {factory->
+                            println("200-2 $factory")
+                            stack.add(Stack(factory::class, factory(), f).also {curr = it})
+                        }
+                        100
                     }
                 }
                 10000->{ /** 종료 */

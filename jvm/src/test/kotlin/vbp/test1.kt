@@ -3,14 +3,13 @@ package vbp
 import kore.bytes.Bytes
 import kore.vbp.VBP
 import kore.vo.VO
+import kore.vo.VOSum
+import kore.vo.field.*
 import kore.vo.field.list.intList
 import kore.vo.field.list.stringList
 import kore.vo.field.map.intMap
 import kore.vo.field.map.stringMap
 import kore.vo.field.value.*
-import kore.vo.field.vo
-import kore.vo.field.voList
-import kore.vo.field.voMap
 import kore.vosn.VSON
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
@@ -338,6 +337,98 @@ class test1 {
             assertEquals(v.c["a"]?.b, "d")
             assertEquals(v.c["b"]?.a, 5)
             assertEquals(v.c["b"]?.b, "e")
+        }
+    }
+    class Test6:VO(){
+        sealed class Sum:VO(){
+            companion object:VOSum<Sum>(::A, ::B)
+            class A:Sum(){
+                var c by boolean
+            }
+            class B:Sum(){
+                var d by long
+            }
+            var a by int
+            var b by string
+        }
+        var a by sum(Sum)
+        var b by int
+        var c by sumList(Sum)
+        var d by sumMap(Sum)
+    }
+    @Test
+    fun test6() {
+        runBlocking {
+            val vo = Test6().also {
+                it.a = Test6.Sum.A().also {sub->
+                    sub.a = 1
+                    sub.b = "a"
+                    sub.c = true
+                }
+                it.b = 2
+                it.c = mutableListOf(
+                    Test6.Sum.A().also {sub->
+                        sub.a = 3
+                        sub.b = "b"
+                        sub.c = false
+                    },
+                    Test6.Sum.B().also {sub->
+                        sub.a = 4
+                        sub.b = "c"
+                        sub.d = 5
+                    }
+                )
+                it.d = mutableMapOf(
+                    "a" to Test6.Sum.A().also {sub->
+                        sub.a = 6
+                        sub.b = "d"
+                        sub.c = true
+                    },
+                    "b" to Test6.Sum.B().also {sub->
+                        sub.a = 7
+                        sub.b = "e"
+                        sub.d = 8
+                    }
+                )
+            }
+            assertEquals(vo.a.a, 1)
+            assertEquals(vo.a.b, "a")
+            assertEquals((vo.a as Test6.Sum.A).c, true)
+            assertEquals(vo.b, 2)
+            assertEquals(vo.c[0].a, 3)
+            assertEquals(vo.c[0].b, "b")
+            assertEquals((vo.c[0] as Test6.Sum.A).c, false)
+            assertEquals(vo.c[1].a, 4)
+            assertEquals(vo.c[1].b, "c")
+            assertEquals((vo.c[1] as Test6.Sum.B).d, 5)
+            assertEquals(vo.d["a"]?.a, 6)
+            assertEquals(vo.d["a"]?.b, "d")
+            assertEquals((vo.d["a"] as Test6.Sum.A).c, true)
+            assertEquals(vo.d["b"]?.a, 7)
+            assertEquals(vo.d["b"]?.b, "e")
+            assertEquals((vo.d["b"] as Test6.Sum.B).d, 8)
+
+            val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                acc + c
+            }
+            println("ARR ${arr.joinToString { "$it" }}")
+            val v = VBP.from(Test6(), flow{emit(arr)}).last()
+            assertEquals(v.a.a, 1)
+            assertEquals(v.a.b, "a")
+            assertEquals((v.a as Test6.Sum.A).c, true)
+            assertEquals(v.b, 2)
+            assertEquals(v.c[0].a, 3)
+            assertEquals(v.c[0].b, "b")
+            assertEquals((v.c[0] as Test6.Sum.A).c, false)
+            assertEquals(v.c[1].a, 4)
+            assertEquals(v.c[1].b, "c")
+            assertEquals((v.c[1] as Test6.Sum.B).d, 5)
+            assertEquals(v.d["a"]?.a, 6)
+            assertEquals(v.d["a"]?.b, "d")
+            assertEquals((v.d["a"] as Test6.Sum.A).c, true)
+            assertEquals(v.d["b"]?.a, 7)
+            assertEquals(v.d["b"]?.b, "e")
+            assertEquals((v.d["b"] as Test6.Sum.B).d, 8)
         }
     }
 }
