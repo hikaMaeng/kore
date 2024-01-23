@@ -1,6 +1,5 @@
 package vbp
 
-import kore.bytes.Bytes
 import kore.vbp.VBP
 import kore.vo.VO
 import kore.vo.VOSum
@@ -10,7 +9,6 @@ import kore.vo.field.list.stringList
 import kore.vo.field.map.intMap
 import kore.vo.field.map.stringMap
 import kore.vo.field.value.*
-import kore.vosn.VSON
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.last
@@ -105,48 +103,65 @@ class test1 {
     @Test
     fun test2(){
         runBlocking{
-            println("---${Bytes.g.joinToString {"${it}"}}---")
             var vo = Test2().also {
                 it.a = 1
                 it.b = 123.toShort()
                 it.d = 1.2f
             }
-            var str = VSON.to(vo).fold(""){acc, c->
-                acc + c
+            run{
+                val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                    acc + c
+                }
+                val buffer = Buffer().also {
+                    it.writeByte(0)
+                    it.writeInt(1)
+                    it.writeByte(3)
+                    it.writeFloat(1.2f)
+                    it.writeByte(-1)
+                }.readByteArray()
+                //exclude에 값이 있는데 제거되는지
+                assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
             }
-            //exclude에 값이 있는데 제거되는지
-            assertEquals(str, "1|~|1.2")
-            vo = Test2().also {
-                it.a = 1
-                it.d = 1.2f
+            run{
+                vo = Test2().also {
+                    it.a = 1
+                    it.d = 1.2f
+                }
+                val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                    acc + c
+                }
+                val buffer = Buffer().also {
+                    it.writeByte(0)
+                    it.writeInt(1)
+                    it.writeByte(3)
+                    it.writeFloat(1.2f)
+                    it.writeByte(-1)
+                }.readByteArray()
+                //exclude에 값이 없는데 제거되는지
+                assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
             }
-            str = VSON.to(vo).fold(""){acc, c->
-                acc + c
-            }
-            //exclude에 값이 없는데 제거되는지
-            assertEquals(str, "1|~|1.2")
-            //옵셔널에 값을 넣은 경우
-            vo = Test2().also {
-                it.a = 1
-                it.c = 15L
-                it.d = 1.2f
-            }
-            str = VSON.to(vo).fold(""){acc, c->
-                acc + c
-            }
-            assertEquals(str, "1|15|1.2")
-            //문자열 인코딩 테스트
-            vo = Test2().also {
-                it.a = 1
-                it.c = 15L
-                it.d = 1.2f
-                it.e = "a|b~c!\\n"
-            }
-            str = VSON.to(vo).fold(""){acc, c->
-                acc + c
-            }
-//            assertEquals(str, "1|15|1.2|a\\|b~c\\!\\\\n")
+            run {
 
+                vo = Test2().also {
+                    it.a = 1
+                    it.c = 15L
+                    it.d = 1.2f
+                }
+                val arr = VBP.to(vo).fold(byteArrayOf()){acc, c->
+                    acc + c
+                }
+                val buffer = Buffer().also {
+                    it.writeByte(0)
+                    it.writeInt(1)
+                    it.writeByte(2)
+                    it.writeLong(15L)
+                    it.writeByte(3)
+                    it.writeFloat(1.2f)
+                    it.writeByte(-1)
+                }.readByteArray()
+                //옵셔널에 값을 넣은 경우
+                assertEquals(arr.joinToString{"$it"}, buffer.joinToString{"$it"})
+            }
         }
     }
     class Test3:VO(){

@@ -239,7 +239,7 @@ object VBP{
         value.collect {
             var arr:ByteArray? = it
             while(arr != null) arr = parser(arr)?.let{(s, vo)->
-                println("from ${s.joinToString(",")}, ${vo}")
+//                println("from ${s.joinToString(",")}, ${vo}")
                 emitter.emit(vo)
                 s
             }
