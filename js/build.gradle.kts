@@ -34,6 +34,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(project(mapOf("path" to ":kore")))
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC")
             }
         }
         val commonTest by getting {

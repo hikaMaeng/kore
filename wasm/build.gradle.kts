@@ -1,6 +1,6 @@
-import org.jetbrains.compose.ExperimentalComposeLibrary
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
+
 plugins {
     kotlin("multiplatform")
 //    id("org.jetbrains.compose")
@@ -27,6 +27,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(project(mapOf("path" to ":kore")))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC")
 //                implementation(compose.runtime)
 //                implementation(compose.foundation)
 //                implementation(compose.material)

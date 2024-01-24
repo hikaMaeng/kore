@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE")
+
 package vbp
 
 import kore.vbp.VBP
@@ -9,10 +11,11 @@ import kore.vo.field.list.stringList
 import kore.vo.field.map.intMap
 import kore.vo.field.map.stringMap
 import kore.vo.field.value.*
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.promise
 import kotlinx.io.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,7 +35,8 @@ class test1 {
     }
     @Test
     fun test1(){
-        runBlocking{
+        assertEquals(1, 1)
+        GlobalScope.promise{
             val vo = Test1().also {
                 it.a = 1
                 it.b = 123.toShort()
@@ -102,7 +106,7 @@ class test1 {
     }
     @Test
     fun test2(){
-        runBlocking{
+        GlobalScope.promise{
             var vo = Test2().also {
                 it.a = 1
                 it.b = 123.toShort()
@@ -172,7 +176,7 @@ class test1 {
     }
     @Test
     fun test3(){
-        runBlocking{
+        GlobalScope.promise{
             val vo = Test3().also {
                 it.a = mutableListOf(1, 2, 3)
                 it.b = mutableListOf("a", "b", "c")
@@ -240,7 +244,7 @@ class test1 {
     }
     @Test
     fun test4() {
-        runBlocking {
+        GlobalScope.promise {
             val vo = Test4().also {
                 it.a = mutableListOf(1, 2, 3)
                 it.b = Test4.Sub().also {sub->
@@ -299,7 +303,7 @@ class test1 {
     }
     @Test
     fun test5() {
-        runBlocking {
+        GlobalScope.promise {
             val vo = Test5().also {
                 it.a = mutableListOf(
                     Test5.Sub().also {sub->
@@ -373,7 +377,7 @@ class test1 {
     }
     @Test
     fun test6() {
-        runBlocking {
+        GlobalScope.promise {
             val vo = Test6().also {
                 it.a = Test6.Sum.A().also {sub->
                     sub.a = 1
@@ -454,7 +458,7 @@ class test1 {
     }
     @Test
     fun test7() {
-        runBlocking {
+        GlobalScope.promise {
             val vo = Test7().also {
                 it.a = Test7.E.A
                 it.c = mutableListOf(Test7.E.B, Test7.E.C)

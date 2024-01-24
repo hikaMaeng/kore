@@ -5,6 +5,7 @@ package kore.vbp
 import kore.vo.VO
 import kore.vo.VOSum
 import kore.vo.converter.ToNoConverter
+import kore.vo.converter.ToNoEnum
 import kore.vo.converter.ToVONoInitialized
 import kore.vo.field.*
 import kore.vo.field.list.*
@@ -108,21 +109,20 @@ object VBP{
         it[ULongMapField::class] = cULong
         it[StringMapField::class] = cString
 
-//        it[EnumField::class] = {field, v->
-//            val enums:Array<*> = (field as EnumField<*>).enums
-//            val index:Int = readBytes(v){readInt()} as Int
-//            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
-//        }
-//        it[EnumListField::class] = {field, v->
-//            val enums:Array<*> = (field as EnumListField<*>).enums
-//            val index:Int = readBytes(v){readInt()} as Int
-//            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
-//        }
-//        it[EnumMapField::class] = {field, v->
-//            val enums:Array<*> = (field as EnumMapField<*>).enums
-//            val index:Int = readBytes(v){readInt()} as Int
-//            if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
-//        }
+        it[EnumField::class] = {field, v->
+            if(v.size < 2) null else{
+                val enums:Array<*> = when(field){
+                    is EnumField<*>->field.enums
+                    is EnumListField<*>->field.enums
+                    is EnumMapField<*>->field.enums
+                    else->throw Throwable("invalid enum field $field")
+                }
+                val index:Int = v.buffer(2){readShort()}.toInt()
+                if(index < enums.size) enums[index]!! else ToNoEnum(enums, v).terminate()
+            }
+        }
+        it[EnumListField::class] = it[EnumField::class]!!
+        it[EnumMapField::class] = it[EnumField::class]!!
     }
     private val OPTIONAL_NULL:ByteArray = byteArrayOf(1.toByte())
 
