@@ -2,6 +2,7 @@
 
 package kore.vbp
 
+import kore.bytes.ByteQueue
 import kore.vo.VO
 import kore.vo.VOSum
 import kore.vo.field

@@ -1,4 +1,4 @@
-package kore.vbp
+package kore.bytes
 
 import kotlinx.io.Buffer
 
@@ -25,13 +25,13 @@ class ByteQueue{
         block()
         end += n
     }
-    operator fun plus(b:ByteArray):ByteQueue{
+    operator fun plus(b:ByteArray):ByteQueue {
         expand(b.size){
             b.copyInto(buffer, end)
         }
         return this
     }
-    operator fun plus(b:Byte):ByteQueue{
+    operator fun plus(b:Byte):ByteQueue {
         expand(1){
             buffer[end] = b
         }

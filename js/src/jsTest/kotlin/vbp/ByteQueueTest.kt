@@ -1,6 +1,6 @@
 package vbp
 
-import kore.vbp.ByteQueue
+import kore.bytes.ByteQueue
 import kotlinx.io.readDouble
 import kotlinx.io.readFloat
 import kotlin.test.Test
